@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+backups
+storage
+inventario
+plans
+*.log
+.env
+.env.*
+!.env.example

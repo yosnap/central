@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --color-ink: #0f1b2d;
+  --color-muted: #52627a;
+  --color-line: #d5deea;
+  --color-panel: #ffffff;
+  --color-ground: #f1f5fb;
+  --color-accent: #1d5fd1;
+  --color-accent-strong: #1549a6;
+  --color-accent-soft: #e4edfc;
+  --color-on-accent: #ffffff;
+  --color-ok: #137a49;
+  --color-warn: #9a5b00;
+  --color-bad: #c0262d;
+  --color-ok-soft: #e2f4e9;
+  --color-warn-soft: #fdf1dc;
+  --color-bad-soft: #fde7e7;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #e8eef8;
+    --color-muted: #9aabc3;
+    --color-line: #263550;
+    --color-panel: #111b2c;
+    --color-ground: #0a1220;
+    --color-accent: #6ea8ff;
+    --color-accent-strong: #9cc3ff;
+    --color-accent-soft: #17294a;
+    --color-on-accent: #061226;
+    --color-ok: #4cc68a;
+    --color-warn: #f0b04a;
+    --color-bad: #ff7d7d;
+    --color-ok-soft: #10291d;
+    --color-warn-soft: #2d230f;
+    --color-bad-soft: #351619;
+  }
+}
+
+/* Escala base de 18 px: toda la interfaz (rem) crece a la vez */
+html { font-size: 112.5%; }
+body { background: var(--color-ground); color: var(--color-ink); }
+.num { font-variant-numeric: tabular-nums; }
+::selection { background: var(--color-accent-soft); }

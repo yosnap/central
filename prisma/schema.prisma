@@ -1,0 +1,801 @@
+// Central — CRM personal de Paulo (iServisat)
+// Fase 1 implementada: Client, Project, ProjectLocation, Website, UptimeCheck, Note, ScanRoot.
+// Fases siguientes ya modeladas: Quote*, Rate, BrandSettings, MailAccount, SavedMessage.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────── Clientes ─────────
+
+model Client {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  company   String?
+  email     String?
+  phone     String?
+  taxId     String?   // NIF/CIF para presupuestos
+  address   String?
+  notes     Note[]
+  projects  Project[]
+  websites  Website[]
+  quotes    Quote[]
+  messages  SavedMessage[]
+  events    CalendarEventLink[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// ───────── Proyectos ─────────
+
+enum ProjectKind {
+  CLIENT     // trabajo para un cliente
+  OWN        // proyecto propio (producto, web personal)
+  TRAINING   // formación, sesiones, demos de CodeIA
+  EXPERIMENT // pruebas, forks de terceros, spikes
+}
+
+enum ProjectStatus {
+  ACTIVE      // commit o cambios en los últimos 30 días
+  MAINTENANCE // actividad en los últimos 6 meses
+  DORMANT     // más de 6 meses sin actividad
+  ARCHIVED    // copia antigua, backup o marcado a mano
+}
+
+enum DeployStatus {
+  UNKNOWN      // sin indicar
+  NOT_DEPLOYED // nunca llegó a producción
+  STAGING      // solo en pruebas / preproducción
+  PRODUCTION   // en producción
+  RETIRED      // estuvo en producción y se retiró
+}
+
+model Project {
+  id              String        @id @default(cuid())
+  slug            String        @unique // remote normalizado o ruta principal
+  name            String
+  kind            ProjectKind   @default(OWN)
+  status          ProjectStatus @default(ACTIVE)
+  statusLocked    Boolean       @default(false) // si lo fijas a mano, el escáner no lo cambia
+  phase           String?       // fase libre: "Desarrollo", "Entrega", "Soporte"...
+  description     String?
+  version         String?       // la de la rama de integración (develop, si no main); si no hay git, la de la carpeta
+  localVersion    String?       // la de la rama que tiene sacada ahora la carpeta principal
+  branchVersions  Json?         // { develop: '0.80.1', main: '0.55.0', … }
+  framework       String?       // "Next.js 16.4.2"
+  stack           String[]
+  repoUrl         String?
+  repoLocked      Boolean       @default(false) // si lo escribes a mano, el escáner no lo cambia
+  defaultBranch   String?
+  lastCommitAt    DateTime?
+  lastCommitMsg   String?
+  commitCount     Int?
+  uncommitted     Int? // ficheros versionados con cambios sin commit
+  untracked       Int? // ficheros nuevos que git no sigue (no versionados)
+  hasClaudeMd     Boolean       @default(false)
+  lastActivityAt  DateTime?
+  deployStatus    DeployStatus  @default(UNKNOWN)
+  hosting         String?       // "Easypanel · Hetzner", "Vercel", "Hosting cliente"...
+  deployedVersion String?       // versión que está en producción
+  reviewedAt      DateTime?     // null = proyecto nuevo pendiente de revisar
+  type              ProjectType?  // qué es (lo confirma el usuario)
+  platform          Platform?     // plataforma externa de un plugin, tema o extensión
+  parentId          String?       // sistema propio al que pertenece (addon, módulo)
+  parent            Project?      @relation("ProjectParts", fields: [parentId], references: [id], onDelete: SetNull)
+  parts             Project[]     @relation("ProjectParts")
+  suggestedType     ProjectType?  // propuesta del escáner
+  suggestedPlatform Platform?
+  suggestedDomains  String[]      // dominios leídos de la configuración (nunca de .env)
+  installations     Installation[]
+  remotes            RepoRemote[]
+  branchStatus       Json?         // [{ name, upstream, ahead, behind }] según la última información de origin
+  localOnlyBranches  String[]      // ramas locales sin subir
+  remoteOnlyBranches String[]      // ramas remotas sin copia local
+  stashCount         Int?
+  aheadTotal         Int?          // commits sin subir (todas las ramas)
+  behindTotal        Int?          // commits por bajar de la rama actual (sin contar los reescritos)
+  behindAuthors      String[]      // quién hizo lo que hay por bajar: "Daniel (43)"
+  rewrittenCommits   Int?          // cambios que están en local y en origin con distinto hash (rebase, force-push)
+  lastFetchAt        DateTime?
+  fetchError         String?       // último git fetch fallido (credenciales, red…)
+  excluded        Boolean       @default(false) // fuera de Central: no cuenta en listados, avisos ni MCP; el escáner lo respeta
+  excludedAt      DateTime?
+  environments    String[]      // entornos donde se lanza, marcados a mano: development (local), staging, production
+  envFiles        Json?         // nombres de sus ficheros de variables y su entorno (el escáner no los abre)
+  localCompose    Json?         // servicios de su Docker Compose: imagen y puertos publicados
+  composeProject  String?       // nombre del proyecto de Compose (etiqueta com.docker.compose.project)
+  localUrl        String?       // URL de desarrollo en el Mac
+  goneAt          DateTime?     // ninguna de sus carpetas existe ya (con su carpeta raíz escaneada): Pendientes pregunta qué hacer
+  services        ProjectService[]
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  locations       ProjectLocation[]
+  websites        Website[]
+  notes           Note[]
+  quotes          Quote[]
+  messages        SavedMessage[]
+  events          CalendarEventLink[]
+  videos          ProjectVideo[]
+  videoChannels   VideoChannelLink[]
+  secrets         ProjectSecret[]
+  envBackups      EnvBackup[]
+  scannedAt       DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([kind, status])
+  @@index([clientId])
+}
+
+enum LocationKind {
+  MAIN
+  WORKTREE
+  COPY    // otra carpeta con el mismo repo o el mismo nombre
+  BACKUP
+}
+
+model ProjectLocation {
+  id         String       @id @default(cuid())
+  path       String       @unique // ruta absoluta en el disco
+  kind       LocationKind @default(MAIN)
+  branch     String?
+  version    String?
+  modifiedAt DateTime?
+  uncommitted  Int?
+  untracked    Int?
+  lastCommitAt DateTime?
+  merged       Boolean?    // worktree cuya rama ya está fusionada en la del principal
+  missing      Boolean      @default(false) // worktree que git apunta pero ya no existe (huérfano)
+  projectId  String
+  project    Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  scannedAt  DateTime     @default(now())
+}
+
+// Dominios y servicios de un proyecto por entorno: web, API, admin, n8n, base de datos...
+model ProjectService {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String   // "web", "api", "admin", "n8n"...
+  environment String   @default("production") // production | staging | development
+  url         String?
+  hosting     String?  // si difiere del hosting del proyecto
+  notes       String?
+  monitor     Boolean  @default(true) // si tiene URL, se vigila en Webs
+  versionPath   String?   // ruta que devuelve la versión desplegada, p. ej. /version o /api/health
+  liveVersion   String?   // última versión leída de esa ruta
+  liveVersionAt DateTime?
+  websiteId   String?  @unique
+  website     Website? @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  serverId    String?  // servidor donde está desplegado
+  deployments Deployment[]
+  server      Server?  @relation(fields: [serverId], references: [id], onDelete: SetNull)
+  containers  ServerContainer[]
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model ScanRoot {
+  id         String    @id @default(cuid())
+  path       String    @unique
+  lastScanAt DateTime?
+  found      Int?
+}
+
+// ───────── Webs y uptime ─────────
+
+enum WebsiteKind {
+  CLIENT   // web de cliente
+  OWN      // web propia
+  CENTRAL  // servicio centralizado (n8n, Easypanel, APIs, paneles...)
+}
+
+enum ProjectType {
+  WEB_SITE
+  WEB_APP
+  ECOMMERCE
+  API
+  ADDON
+  PLUGIN
+  MOBILE_APP
+  DESKTOP_APP
+  BROWSER_EXTENSION
+  LIBRARY
+  AUTOMATION
+  CONTENT
+}
+
+enum Platform {
+  WORDPRESS
+  WOOCOMMERCE
+  PRESTASHOP
+  SHOPIFY
+  N8N
+  CHROME
+  ELEMENTOR
+  OTHER
+}
+
+// Dónde está instalado un plugin, tema o addon, y con qué versión
+model Installation {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  websiteId   String
+  website     Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  version     String?
+  notes       String?
+  installedAt DateTime @default(now())
+
+  @@unique([projectId, websiteId])
+}
+
+model Website {
+  id            String        @id @default(cuid())
+  url           String        @unique
+  label         String?
+  kind          WebsiteKind   @default(CLIENT)
+  monitored     Boolean       @default(true)
+  expectStatus  Int           @default(200) // aceptamos 2xx/3xx; esto es informativo
+  lastStatus    String?       // "up" | "down"
+  lastCode      Int?
+  lastMs        Int?
+  lastCheckedAt DateTime?
+  kumaMonitorId Int?          // monitor en Uptime Kuma
+  kumaStatus    String?       // up | down | pending | maintenance (según Uptime Kuma)
+  kumaMs        Int?
+  sslDaysLeft   Int?          // días que le quedan al certificado
+  kumaCheckedAt DateTime?
+  clientId      String?
+  client        Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId     String?
+  project       Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  checks        UptimeCheck[]
+  notes         Note[]
+  service       ProjectService?
+  installations Installation[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model UptimeCheck {
+  id        String   @id @default(cuid())
+  websiteId String
+  website   Website  @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  up        Boolean
+  code      Int?
+  ms        Int?
+  error     String?
+  checkedAt DateTime @default(now())
+
+  @@index([websiteId, checkedAt])
+}
+
+// ───────── Notas y mensajes guardados ─────────
+
+model Note {
+  id        String   @id @default(cuid())
+  body      String
+  pinned    Boolean  @default(false)
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  websiteId String?
+  website   Website? @relation(fields: [websiteId], references: [id], onDelete: Cascade)
+  source    String?  // "app", "mcp", "email"...
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum MailProvider {
+  GMAIL
+  GOOGLE_WORKSPACE
+  MICROSOFT
+  IMAP
+}
+
+model MailAccount {
+  id           String       @id @default(cuid())
+  address      String       @unique
+  provider     MailProvider
+  label        String?
+  // las credenciales y tokens nunca van aquí: están cifrados en la conexión (IntegrationConnection.secret)
+  connectionId String?
+  connection   IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  enabled      Boolean      @default(true)
+  messages     SavedMessage[]
+  createdAt    DateTime     @default(now())
+}
+
+model SavedMessage {
+  id          String       @id @default(cuid())
+  accountId   String?
+  account     MailAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  externalId  String?      // id del mensaje en el proveedor
+  fromAddress String
+  subject     String
+  snippet     String?
+  body        String?      // texto del mensaje, guardado al marcarlo como importante
+  toAddress   String?
+  threadId    String?      // hilo en el proveedor, para abrirlo en Gmail
+  receivedAt  DateTime
+  important   Boolean      @default(true)
+  clientId    String?
+  client      Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+
+  @@unique([accountId, externalId])
+}
+
+// ───────── Presupuestos (fase 2) ─────────
+
+model BrandSettings {
+  id          String  @id @default("default")
+  businessName String @default("iServisat")
+  ownerName   String?
+  taxId       String?
+  address     String?
+  email       String?
+  phone       String?
+  website     String?
+  logoPath    String? // ruta en /public o URL
+  logoData    Bytes?  // logo subido desde Ajustes (PNG o JPG), para la ficha y el PDF
+  logoType    String? // image/png | image/jpeg
+  iban        String?
+  defaultVat  Decimal @default(21) @db.Decimal(5, 2)
+  quoteFooter String?
+  pricingGuide String? // criterios de precio que sigue el asistente de presupuestos
+  primaryColor   String? // colores corporativos (#rrggbb) para PDF y Word; se sacan del logo si están vacíos
+  secondaryColor String?
+}
+
+model Rate {
+  id        String  @id @default(cuid())
+  name      String  // "Hora desarrollo", "Web Next.js básica", "Mantenimiento mensual"
+  unit      String  @default("hora") // hora | proyecto | mes | unidad
+  price     Decimal @db.Decimal(10, 2)
+  active    Boolean @default(true)
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Quote {
+  id         String      @id @default(cuid())
+  number     String      @unique // P-2026-001
+  title      String
+  status     QuoteStatus @default(DRAFT)
+  issuedAt   DateTime    @default(now())
+  validUntil DateTime?
+  vat        Decimal     @default(21) @db.Decimal(5, 2)
+  notes      String?     // notas y condiciones
+  scope           String?  // objeto y alcance
+  includes        String[] // qué incluye
+  excludes        String[] // qué no incluye
+  assumptions     String[] // supuestos y condiciones
+  thirdPartyCosts String?  // costes de terceros a cargo del cliente
+  schedule        Json?    // cronograma: [{ when, what }]
+  aiSessionId     String?  // sesión de Claude Code del asistente, para seguir la conversación
+  messages        QuoteMessage[]
+  clientId   String
+  client     Client      @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  projectId  String?
+  project    Project?    @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  items      QuoteItem[]
+  phases     QuotePhase[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model QuoteItem {
+  id          String  @id @default(cuid())
+  quoteId     String
+  quote       Quote   @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Decimal @default(1) @db.Decimal(10, 2)
+  unit        String? // hora, mes, unidad… (de la tarifa o a mano)
+  details     String? // qué incluye la fase o el paquete
+  unitPrice   Decimal @db.Decimal(10, 2) // precio, o «desde» si hay priceMax
+  priceMax    Decimal? @db.Decimal(10, 2) // «hasta»: con él, el precio es variable (rango)
+  position    Int     @default(0)
+}
+
+enum PhaseStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  INVOICED
+}
+
+model QuotePhase {
+  id          String      @id @default(cuid())
+  quoteId     String
+  quote       Quote       @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  percent     Decimal?    @db.Decimal(5, 2) // % del total que se factura en esta fase
+  dueDate     DateTime?
+  status      PhaseStatus @default(PENDING)
+  position    Int         @default(0)
+  completedAt DateTime?
+}
+
+// Conversación con el asistente de presupuestos (Claude Code del Mac)
+model QuoteMessage {
+  id          String    @id @default(cuid())
+  quoteId     String
+  quote       Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  role        String    // user | assistant
+  content     String
+  attachments String[]  // nombres de los ficheros subidos con el mensaje
+  proposal    Json?     // propuesta completa que devolvió el asistente
+  appliedAt   DateTime? // cuándo se aplicó la propuesta al presupuesto
+  error       Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  @@index([quoteId, createdAt])
+}
+
+// Evento de Google Calendar ligado a un cliente o proyecto (título y fechas en caché para las fichas y el MCP)
+model CalendarEventLink {
+  id           String                @id @default(cuid())
+  connectionId String
+  connection   IntegrationConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  calendarId   String
+  eventId      String
+  summary      String
+  start        DateTime
+  end          DateTime?
+  allDay       Boolean               @default(false)
+  htmlLink     String?
+  clientId     String?
+  client       Client?               @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  projectId    String?
+  project      Project?              @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  @@unique([calendarId, eventId])
+}
+
+// ───────── Ajustes e integraciones ─────────
+
+enum IntegrationProvider {
+  SN4P      // portfolio sn4p.dev
+  YOUTUBE
+  BUNNY
+  GOOGLE
+  GOOGLE_APP // cliente OAuth de Google Cloud (id y secreto cifrados) con el que se conectan las cuentas
+  META
+  GITHUB
+  GITLAB
+  GITEA
+  MICROSOFT
+  UPTIME_KUMA
+}
+
+// Una conexión configurada en Ajustes. Los secretos van cifrados (AES-256-GCM) en `secret`.
+model IntegrationConnection {
+  id        String              @id @default(cuid())
+  provider  IntegrationProvider
+  label     String              // nombre para reconocerla: "sn4p.dev", "Cuenta Google iServisat"…
+  account   String?             // cuenta con la que se conectó (email, usuario)
+  baseUrl   String?             // p. ej. https://sn4p.dev
+  secret    String?             // JSON cifrado: { password } | { apiKey } | { accessToken, refreshToken }
+  config    Json?               // datos no secretos
+  lastOkAt  DateTime?
+  lastError String?
+  channels  VideoChannel[]
+  mailboxes MailAccount[]
+  events    CalendarEventLink[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+}
+
+enum VideoProvider {
+  YOUTUBE
+  BUNNY
+}
+
+// Canal de YouTube o biblioteca de Bunny Stream, gestionado en Ajustes
+model VideoChannel {
+  id           String                 @id @default(cuid())
+  provider     VideoProvider
+  name         String                 // "CodeIA", "Bloom Marbella marketing"…
+  externalId   String                 // id del canal de YouTube o de la biblioteca de Bunny
+  connectionId String?
+  connection   IntegrationConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  links        VideoChannelLink[]
+  videos       ProjectVideo[]
+  lastSyncAt   DateTime?
+  lastError    String?
+  createdAt    DateTime               @default(now())
+
+  @@unique([provider, externalId])
+}
+
+// A qué proyectos va un canal. Con filtro, solo los vídeos cuyo título lo contengan.
+model VideoChannelLink {
+  id        String       @id @default(cuid())
+  channelId String
+  channel   VideoChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  match     String?      // texto que debe aparecer en el título; vacío = todos los vídeos del canal
+  purpose   VideoPurpose @default(DEMO)
+
+  @@unique([channelId, projectId])
+}
+
+enum VideoPurpose {
+  DEMO
+  SALES
+  MARKETING
+  TUTORIAL
+}
+
+model ProjectVideo {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  channelId   String?
+  channel     VideoChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  externalId  String?       // id del vídeo en YouTube/Bunny
+  title       String
+  url         String
+  thumbnail   String?
+  purpose     VideoPurpose  @default(DEMO)
+  publishedAt DateTime?
+  manual      Boolean       @default(false) // añadido a mano (no viene de un canal)
+  createdAt   DateTime      @default(now())
+
+  @@unique([projectId, url])
+}
+
+// Secretos de un proyecto por entorno. `value` va cifrado con encryptJson (AES-256-GCM); nunca en claro.
+model ProjectSecret {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment String   @default("production") // production | staging | development
+  key         String
+  value       String   // cifrado
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, environment, key])
+}
+
+// Copia de un .env completo, cifrada. Se crea al importar, antes de restaurar o a mano.
+model EnvBackup {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  environment String   @default("production")
+  content     String   // cifrado
+  keyCount    Int
+  source      String   @default("import") // import | restore | manual
+  createdAt   DateTime @default(now())
+
+  @@index([projectId, environment, createdAt])
+}
+
+enum RepoProvider {
+  GITHUB
+  GITLAB
+  GITEA
+  OTHER
+}
+
+// Remoto git de un proyecto y lo que dice su proveedor (API con token)
+model RepoRemote {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name          String       // origin, upstream…
+  url           String       // sin credenciales
+  provider      RepoProvider @default(OTHER)
+  host          String
+  path          String?      // titular/repo
+  visibility    String?      // public | private | internal
+  defaultBranch String?
+  lastPushAt    DateTime?
+  openPrs       Int?
+  openIssues    Int?
+  ciStatus      String?      // success | failure | pending | null
+  ciUrl         String?
+  latestRelease String?
+  archived      Boolean?
+  syncError     String?
+  syncedAt      DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([projectId, name])
+}
+
+// Servidores vigilados por SSH (usuario infobar, scripts de remote/). Ver docs/SERVIDORES.md
+model Server {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  host          String
+  sshPort       Int       @default(22)
+  collectUser   String    @default("infobar")
+  adminUser     String?   // para abrir una terminal de administración
+  keyPath       String    @default("~/.ssh/infobar_ed25519") // ruta de la clave, nunca la clave
+  provider      String?   // Hetzner, Contabo, Scaleway…
+  panel         String?   // easypanel | dokploy | docker
+  panelUrl      String?
+  knownIps      String[]  // orígenes de sesión esperados
+  allowMail     Boolean   @default(false) // aloja correo: sus puertos no cuentan como abiertos de más
+  intervalSec   Int       @default(300)
+  incidentSec   Int       @default(60)
+  status        String?   // green | amber | red | grey (global)
+  liveStatus    String?   // salud viva, la que acelera la lectura
+  error         String?   // motivo del último fallo de lectura
+  lastAttemptAt DateTime?
+  lastOkAt      DateTime?
+  nextAt        DateTime? // próxima lectura
+  pausedUntil   DateTime? // tras un rechazo de clave, autenticación o huella
+  scriptVersion String?
+  snapshot      Json?     // última lectura buena ya interpretada (tarjetas)
+  notes         String?
+  samples       ServerSample[]
+  hours         ServerHour[]
+  checks        ServerCheck[]
+  containers    ServerContainer[]
+  attackIps     ServerAttackIp[]
+  deployments   Deployment[]
+  services      ProjectService[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model ServerSample {
+  id            String   @id @default(cuid())
+  serverId      String
+  server        Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  at            DateTime @default(now())
+  cpu           Float?
+  mem           Float?
+  disk          Float?
+  load          Float?
+  servicesOk    Int?
+  servicesTotal Int?
+  sessions      Int?
+  attempts      Int?     // intentos de acceso SSH en la última hora
+  exposed       Int[]    // puertos alcanzables desde fuera
+  status        String
+
+  @@index([serverId, at])
+}
+
+// Agregado por hora de las muestras (se guardan 90 días; las muestras, 7)
+model ServerHour {
+  id       String   @id @default(cuid())
+  serverId String
+  server   Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  hour     DateTime
+  cpuAvg   Float?
+  cpuMax   Float?
+  memMax   Float?
+  diskMax  Float?
+  attempts Int?
+  worst    String
+
+  @@unique([serverId, hour])
+}
+
+// Comprobaciones de protección; ok null = no se pudo mirar
+model ServerCheck {
+  id        String   @id @default(cuid())
+  serverId  String
+  server    Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  key       String
+  ok        Boolean?
+  detail    String?
+  fix       String?
+  checkedAt DateTime @default(now())
+
+  @@unique([serverId, key])
+}
+
+// Servicios de Docker/Swarm o contenedores que reporta el servidor
+model ServerContainer {
+  id               String          @id @default(cuid())
+  serverId         String
+  server           Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name             String
+  kind             String          // swarm | container
+  state            String          // ok | down | stopped
+  desired          Int?
+  running          Int?
+  image            String?
+  version          String?         // org.opencontainers.image.version o la etiqueta de la imagen si parece versión
+  startedAt        DateTime?       // arranque del contenedor o última actualización del servicio de Swarm: si cambia, es un despliegue
+  role             String?         // app | database | cache | proxy | queue | automation | storage | other
+  detail           String?         // estado tal cual lo da Docker
+  domains          String[]
+  projectServiceId String?
+  projectService   ProjectService? @relation(fields: [projectServiceId], references: [id], onDelete: SetNull)
+  matchManual      Boolean         @default(false) // emparejado a mano: el automático no lo toca
+  seenAt           DateTime        @default(now())
+  deployments      Deployment[]
+
+  @@unique([serverId, name])
+}
+
+model ServerAttackIp {
+  id       String   @id @default(cuid())
+  serverId String
+  server   Server   @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  ip       String
+  attempts Int
+  firstAt  DateTime @default(now())
+  lastAt   DateTime @default(now())
+
+  @@unique([serverId, ip])
+}
+
+// Despliegue detectado: el contenedor arrancó de nuevo o el servicio de Swarm se actualizó
+model Deployment {
+  id               String           @id @default(cuid())
+  serverId         String
+  server           Server           @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  containerId      String?
+  container        ServerContainer? @relation(fields: [containerId], references: [id], onDelete: SetNull)
+  containerName    String
+  projectServiceId String?
+  projectService   ProjectService?  @relation(fields: [projectServiceId], references: [id], onDelete: SetNull)
+  at               DateTime         // cuándo arrancó la versión nueva
+  image            String?
+  version          String?          // versión que se leyó tras el despliegue
+  previousVersion  String?
+
+  @@index([projectServiceId, at])
+  @@index([serverId, at])
+}
+
+// ───────── Trabajador del Mac ─────────
+// Lo que necesita el Mac (Claude Code, escáner, Docker local) se pide con un trabajo; el trabajador del Mac pregunta
+// por ellos (solo salen conexiones del Mac), los hace y devuelve el resultado. Tipos fijos: ver src/lib/worker.ts.
+model WorkerJob {
+  id         String    @id @default(cuid())
+  type       String    // assistant | scan | folders | local-status | env-file
+  payload    Json
+  status     String    @default("pending") // pending | running | done | error
+  result     Json?
+  error      String?
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+// Último latido del trabajador: si no llega en un rato, Central avisa de que el Mac no está conectado.
+model WorkerBeat {
+  id         String   @id @default("mac")
+  lastSeenAt DateTime
+  hostname   String?
+  version    String?
+  roots      String[] // carpetas que el Mac deja escanear (CENTRAL_WORKER_ROOTS)
+}

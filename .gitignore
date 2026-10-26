@@ -1,0 +1,23 @@
+node_modules
+.next
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+*.pem
+*.key
+*.tsbuildinfo
+next-env.d.ts
+/out
+/coverage
+src/generated
+inventario/*.csv
+inventario/webs.txt
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+backups/
+
+# documentos subidos al asistente de presupuestos
+storage/

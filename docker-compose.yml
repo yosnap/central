@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: central
+      POSTGRES_PASSWORD: central
+      POSTGRES_DB: central
+    ports:
+      - "5433:5432"
+    volumes:
+      - central-db:/var/lib/postgresql/data
+
+  # Almacenamiento de miniaturas y ficheros (API compatible con S3 en :8334 del host)
+  storage:
+    image: chrislusf/seaweedfs:latest
+    restart: unless-stopped
+    command: server -dir=/data -s3 -s3.port=8333 -master.volumeSizeLimitMB=1024
+    ports:
+      - "8334:8333"   # S3 (8333 en el host lo usa otro proyecto)
+      - "9334:9333"   # panel del master
+    volumes:
+      - central-storage:/data
+
+  # Uptime Kuma: vigila las webs y avisa (Telegram, correo). En el Mac por ahora; luego, en un VPS aparte.
+  kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    ports:
+      - "3098:3001"
+    volumes:
+      - central-kuma:/app/data
+
+volumes:
+  central-db:
+  central-storage:
+  central-kuma:

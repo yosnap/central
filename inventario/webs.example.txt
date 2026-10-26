@@ -1,0 +1,6 @@
+# dominio ; cliente|propia|central ; Cliente (opcional) ; Etiqueta (opcional)
+bloommarbella.es ; cliente ; Bloom Marbella
+luckyled.es ; cliente ; Luckyled
+coetools.com ; cliente ; Coetools
+motoraldia.net ; cliente ; AreaFDesign ; Motor al día
+codeia.dev ; propia ; ; CodeIA
