@@ -177,6 +177,13 @@ export async function installInfobar({ host, port, user, password, privateKey }:
     const r = isRoot ? await exec(install) : await exec(`sudo -S -p '' sh -c "${install.replaceAll('"', '\\"').replaceAll('$', '\\$')}"`, `${password ?? ''}\n`)
     log = r.out.replace(/\[sudo\][^\n]*\n?/g, '').trim()
     if (r.code !== 0) return { ok: false, log: /incorrect password|sorry, try again|not in the sudoers/i.test(log) ? `sudo ha rechazado a ${user}: entra como root o usa un usuario con sudo.` : log || `La instalación terminó con el código ${r.code}` }
+    // la clave de administración de Central queda autorizada para este usuario: así las próximas actualizaciones
+    // (y el mantenimiento desde el Mac) entran sin contraseña. Sin duplicarla y con salto de línea final, para no
+    // pegarla a la última clave del fichero.
+    const adminPub = await adminPublicKey()
+    const body = adminPub.split(/\s+/)[1]
+    const add = await exec(`umask 077; mkdir -p ~/.ssh && f=~/.ssh/authorized_keys && touch "$f" && if grep -qF '${body}' "$f"; then echo ya; else [ -s "$f" ] && [ -n "$(tail -c1 "$f")" ] && echo >> "$f"; cat >> "$f" && echo nueva; fi`, `${adminPub}\n`)
+    log += add.out.includes('nueva') ? `\nClave de administración de Central autorizada para ${user}.` : add.out.includes('ya') ? '' : `\nNo se pudo autorizar la clave de administración: ${add.out.trim()}`
     return { ok: true, log }
   } finally {
     close()
