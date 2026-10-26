@@ -24,7 +24,11 @@
     "websites:import": "bun scripts/import-websites.ts",
     "videos:sync": "bun scripts/sync-videos.ts",
     "mcp": "bun src/mcp/server.ts",
-    "trabajador": "bun scripts/trabajador.ts"
+    "trabajador": "bun scripts/trabajador.ts",
+    "trabajador:instalar": "bash scripts/trabajador-mac.sh instalar",
+    "trabajador:quitar": "bash scripts/trabajador-mac.sh quitar",
+    "trabajador:estado": "bash scripts/trabajador-mac.sh estado",
+    "produccion:variables": "bun scripts/produccion-variables.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

@@ -21,14 +21,14 @@ Monousuario. No es un SaaS (para eso existe CRMDev; no mezclar).
 - Prisma 7 + PostgreSQL, generador `prisma-client` con salida en `src/generated/prisma` y adaptador `@prisma/adapter-pg`
 - Tailwind CSS 4 (tokens en `src/app/globals.css`, `@theme`)
 - `@modelcontextprotocol/sdk` para el servidor MCP (stdio)
-- Docker + Easypanel en Hetzner
+- Docker; producción en Dokploy (Sn4p.dev, central.sn4p.dev) con el trabajador del Mac para lo que necesita el Mac
 
 ## Comandos
 
 ```bash
 docker compose up -d     # Postgres :5433, SeaweedFS :8334, Uptime Kuma :3098
 bun install              # ejecuta prisma generate (postinstall)
-bunx prisma db push       # aplica el esquema (en producción: prisma migrate)
+bunx prisma migrate dev --name <cambio>   # cambios de esquema (migraciones; producción aplica migrate deploy al arrancar)
 bun run dev
 bun run typecheck
 bun run build
@@ -38,6 +38,8 @@ bun run uptime
 bun run servidores        # lee los servidores a los que les toca (-- --todos: todos ya)
 bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto (también tareas:quitar, tareas:estado)
 bun run mcp
+bun run produccion:variables   # variables de producción al portapapeles para Dokploy (sin mostrarlas)
+bun run trabajador:instalar    # trabajador del Mac en launchd (con Central en producción; también :quitar y :estado)
 ```
 
 ## Estructura

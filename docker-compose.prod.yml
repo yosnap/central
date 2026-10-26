@@ -1,0 +1,50 @@
+# Central en producción (Dokploy · Sn4p.dev). Las variables las pone Dokploy (Entorno del compose); ninguna va aquí.
+# Solo «web» tiene dominio (central.sn4p.dev, puerto 3000); la base de datos y Uptime Kuma no publican puertos.
+x-central: &central
+  build: .
+  restart: unless-stopped
+  depends_on: [db]
+  environment:
+    DATABASE_URL: postgresql://central:${POSTGRES_PASSWORD}@db:5432/central
+    CENTRAL_RUNTIME: production
+    CENTRAL_PASSWORD: ${CENTRAL_PASSWORD}
+    CENTRAL_SESSION_SECRET: ${CENTRAL_SESSION_SECRET}
+    CENTRAL_ENCRYPTION_KEY: ${CENTRAL_ENCRYPTION_KEY}
+    CRON_TOKEN: ${CRON_TOKEN}
+    CENTRAL_API_TOKEN: ${CENTRAL_API_TOKEN}
+    CENTRAL_WORKER_TOKEN: ${CENTRAL_WORKER_TOKEN}
+    CENTRAL_SSH_KEY_B64: ${CENTRAL_SSH_KEY_B64}
+    CENTRAL_SSH_KNOWN_HOSTS_B64: ${CENTRAL_SSH_KNOWN_HOSTS_B64}
+  volumes:
+    - central-storage:/app/storage
+
+services:
+  web:
+    <<: *central
+
+  # lectura de servidores cada minuto y uptime cada 10 minutos (lo que en el Mac hacía launchd)
+  tareas:
+    <<: *central
+    depends_on: [db, web]
+    command: ["bun", "scripts/tareas-servidor.ts"]
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: central
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: central
+    volumes:
+      - central-db:/var/lib/postgresql/data
+
+  kuma:
+    image: louislam/uptime-kuma:2
+    restart: unless-stopped
+    volumes:
+      - central-kuma:/app/data
+
+volumes:
+  central-db:
+  central-storage:
+  central-kuma:
