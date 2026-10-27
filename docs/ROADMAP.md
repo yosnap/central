@@ -97,6 +97,6 @@ La visión completa está en `VISION.md`. Aquí, el orden de construcción.
 
 ## Fase 8 — Producción e integraciones
 
-- [ ] Despliegue en Easypanel · Hetzner
-- [ ] `bun run sync` local → producción con token
+- [x] Despliegue en Dokploy · Sn4p.dev (central.sn4p.dev): web, tareas, PostgreSQL y Uptime Kuma; datos migrados
+- [x] Trabajador del Mac (en lugar de `bun run sync`): asistente y escaneo por cola, solo conexiones de salida
 - [ ] MCP por HTTP con token (conector remoto) · webhooks a n8n
