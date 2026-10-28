@@ -4,6 +4,7 @@ import { CalendarDays, FileText, FolderGit2, Globe, LayoutDashboard, ListTodo, M
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { AlertsBell, type BellAlert } from './alerts-bell'
+import { Logo } from './logo'
 import { cn } from './ui/cn'
 
 const NAV = [
@@ -27,8 +28,11 @@ export function Sidebar({ pending, alerts }: { pending: { total: number; fresh: 
     <nav aria-label="Secciones" className="sticky top-0 z-30 flex shrink-0 gap-1 overflow-x-auto border-b border-line bg-panel px-4 py-3 lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5 lg:py-8">
       <div className="mr-4 flex items-center justify-between gap-2 lg:mb-8 lg:mr-0">
         <Link href="/" className="flex items-center gap-3 px-2 text-2xl font-semibold tracking-tight">
-          <span className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-on-accent">C</span>
-          <span className="hidden sm:inline">Central</span>
+          <Logo />
+          <span className="hidden flex-col leading-tight sm:flex">
+            Central
+            <span className="num text-sm font-normal text-muted" title="Versión de Central (CHANGELOG.md)">v{process.env.NEXT_PUBLIC_APP_VERSION}</span>
+          </span>
         </Link>
         {alerts && <AlertsBell {...alerts} />}
       </div>
