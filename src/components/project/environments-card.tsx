@@ -20,7 +20,7 @@ export async function EnvironmentsCard({ projectId }: { projectId: string }) {
   const p = await prisma.project.findUniqueOrThrow({
     where: { id: projectId },
     select: {
-      name: true, slug: true, suggestedDomains: true, environments: true, envFiles: true, localCompose: true, composeProject: true, localUrl: true,
+      name: true, slug: true, framework: true, stack: true, suggestedDomains: true, environments: true, envFiles: true, localCompose: true, composeProject: true, localUrl: true,
       locations: { where: { kind: 'MAIN', missing: false }, select: { path: true }, take: 1 },
       services: {
         orderBy: { position: 'asc' },
@@ -64,7 +64,7 @@ export async function EnvironmentsCard({ projectId }: { projectId: string }) {
       <div className="flex flex-col gap-4">
         {e.value === 'development'
           ? <LocalEnvTab projectId={projectId} path={p.locations[0]?.path ?? null} localUrl={p.localUrl} composeProject={p.composeProject} compose={compose} envFiles={envFiles} secretsByEnv={secretsByEnv} />
-          : <ServicesTab projectId={projectId} environment={e.value} services={p.services.filter((x) => x.environment === e.value)} servers={serverOptions} containerOptions={containerOptions}
+          : <ServicesTab projectId={projectId} environment={e.value} framework={[p.framework, ...p.stack]} services={p.services.filter((x) => x.environment === e.value)} servers={serverOptions} containerOptions={containerOptions}
               suggested={suggested.filter((c) => envFromDomain(c.domains[0]) === e.value)} />}
         {e.value !== 'development' && secretsByEnv[e.value] ? <p className="text-sm text-muted">{secretsByEnv[e.value]} variables guardadas para {e.label.toLowerCase()} (en «Secretos»).</p> : null}
       </div>

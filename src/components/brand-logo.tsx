@@ -1,4 +1,4 @@
-import { brandOf } from '@/lib/brands'
+import { brandOf, type Brand as BrandT } from '@/lib/brands'
 import { cn } from '@/components/ui'
 
 /** Los colores muy oscuros se pintan con el color del texto para que se vean en modo oscuro. */
@@ -8,9 +8,9 @@ function isDark(hex: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b < 60
 }
 
-/** Logo de un proveedor o panel; sin logo conocido, sus iniciales. */
-export function BrandLogo({ name, className }: { name: string | null | undefined; className?: string }) {
-  const brand = brandOf(name)
+/** Logo de un proveedor o panel (o de una marca ya resuelta, p. ej. con `techOf`); sin logo conocido, sus iniciales. */
+export function BrandLogo({ name, brand: given, className }: { name?: string | null; brand?: BrandT | null; className?: string }) {
+  const brand = given ?? brandOf(name)
   if (!brand) return null
   if (brand.icon) {
     const dark = isDark(brand.icon.hex)

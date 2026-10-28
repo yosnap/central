@@ -1,6 +1,6 @@
 {
   "name": "central",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "description": "Central — CRM personal de Paulo (iServisat): clientes, proyectos, webs, presupuestos, agenda y correo.",
   "type": "module",
@@ -34,6 +34,9 @@
     "produccion:subir": "bun scripts/produccion-subir.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "3.2.2",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",

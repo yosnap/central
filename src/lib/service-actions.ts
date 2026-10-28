@@ -89,3 +89,13 @@ export async function addFromContainerAction(form: FormData) {
   await linkContainer(d.containerId, `prj:${d.projectId}`, d.environment)
   await refresh(undefined, d.projectId)
 }
+
+/** Orden de los servicios de un entorno (arrastrar y soltar en la ficha). Todos deben ser del mismo proyecto y entorno. */
+export async function reorderServicesAction(ids: string[]) {
+  await requireSession()
+  const list = z.array(z.string().min(1).max(40)).min(1).max(100).parse(ids)
+  const rows = await prisma.projectService.findMany({ where: { id: { in: list } }, select: { projectId: true, environment: true } })
+  if (rows.length !== list.length || new Set(rows.map((r) => `${r.projectId}|${r.environment}`)).size !== 1) return { error: 'Servicios no válidos' }
+  await prisma.$transaction(list.map((id, position) => prisma.projectService.update({ where: { id }, data: { position } })))
+  revalidatePath(`/proyectos/${rows[0].projectId}`)
+}

@@ -1,8 +1,10 @@
 import Link from 'next/link'
-import { Plus, Sparkles, Trash2 } from 'lucide-react'
-import { addFromContainerAction, addServiceAction, deleteServiceAction, updateServiceField } from '@/lib/service-actions'
+import { Box, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { addFromContainerAction, addServiceAction, deleteServiceAction, reorderServicesAction, updateServiceField } from '@/lib/service-actions'
 import { ROLE_LABEL, roleOf } from '@/lib/servers/role'
-import { PLATFORMS } from '@/lib/brands'
+import { PLATFORMS, frameworkOf, techOf } from '@/lib/brands'
+import { BrandLogo } from '@/components/brand-logo'
+import { SortableList } from './sortable-list'
 import { ActionForm, ConfirmAction, Field, InlineField, Input, Pill, SubmitButton, type Option } from '@/components/ui'
 import { MonitorToggle } from './monitor-toggle'
 
@@ -17,22 +19,27 @@ export type Loose = { id: string; name: string; image: string | null; role: stri
 const SERVICE_NAMES = ['web', 'api', 'admin', 'tienda', 'n8n', 'base de datos', 'caché', 'almacenamiento', 'correo'].map((v) => ({ value: v, label: v }))
 
 /** Pestaña de Pruebas o Producción: los servicios del entorno, editables uno a uno, y cómo añadir más. */
-export function ServicesTab({ projectId, environment, services, servers, containerOptions, suggested }: {
-  projectId: string; environment: 'staging' | 'production'; services: TabService[]; servers: Option[]; containerOptions: Option[]; suggested: Loose[]
+export function ServicesTab({ projectId, environment, framework, services, servers, containerOptions, suggested }: {
+  projectId: string; environment: 'staging' | 'production'; framework: (string | null)[]; services: TabService[]; servers: Option[]; containerOptions: Option[]; suggested: Loose[]
 }) {
+  // la aplicación (o un servicio sin contenedor) lleva el framework del proyecto si su imagen no dice nada
+  const appBrand = frameworkOf(...framework)
   const edit = (id: string, field: string) => ({ action: updateServiceField, fields: { id, field } })
   return (
     <div className="flex flex-col gap-6">
       {services.length === 0 && <p className="text-muted">Aún no hay servicios en este entorno. Añádelos desde tus servidores (abajo) o a mano.</p>}
-      {services.map((s) => {
+      <SortableList onReorder={reorderServicesAction} items={services.map((s) => {
         const status = s.website?.kumaStatus ?? s.website?.lastStatus
         const c = s.containers[0]
         const role = c ? ROLE_LABEL[c.role ?? roleOf(c.image, c.name)] : null
-        return (
-          <article key={s.id} className="rounded-2xl border border-line p-5">
+        const isApp = !c || ['app', 'other'].includes(c.role ?? roleOf(c.image, c.name))
+        const tech = (c ? techOf(c.image, c.name) : null) ?? (isApp ? appBrand : null)
+        return { id: s.id, label: s.name, node: (
+          <article className="rounded-2xl border border-line p-5">
             <header className="mb-3 flex flex-wrap items-center gap-3">
+              {tech ? <BrandLogo brand={tech} className="size-6" /> : <Box className="size-6 shrink-0 text-muted" aria-hidden />}
               <InlineField {...edit(s.id, 'name')} label="Nombre del servicio" hideLabel kind="combobox" options={SERVICE_NAMES} value={s.name} display={<span className="text-lg font-semibold">{s.name}</span>} />
-              {role && <Pill tone="accent">{role}</Pill>}
+              {(role || tech) && <Pill tone="accent">{[role, tech?.label].filter(Boolean).join(' · ')}</Pill>}
               {status && <Pill tone={status === 'up' ? 'ok' : 'bad'}>{status === 'up' ? 'En línea' : 'Caída'}{s.website?.lastMs != null ? ` · ${s.website.lastMs} ms` : ''}</Pill>}
               {s.liveVersion && <Pill>v{s.liveVersion.replace(/^v/, '')}</Pill>}
               <div className="ml-auto flex items-center gap-4">
@@ -55,8 +62,8 @@ export function ServicesTab({ projectId, environment, services, servers, contain
               <InlineField {...edit(s.id, 'notes')} label="Notas" value={s.notes ?? ''} placeholder="—" className="xl:col-span-2" />
             </div>
           </article>
-        )
-      })}
+        ) }
+      })} />
 
       {suggested.length > 0 && (
         <section className="rounded-2xl border border-accent/30 bg-accent-soft p-5">
@@ -65,8 +72,9 @@ export function ServicesTab({ projectId, environment, services, servers, contain
           <ul className="flex flex-col gap-2">
             {suggested.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-3">
+                <BrandLogo brand={techOf(c.image, c.name)} />
                 <span className="font-medium">{c.name}</span>
-                <Pill>{ROLE_LABEL[c.role ?? roleOf(c.image, c.name)]}</Pill>
+                <Pill>{[ROLE_LABEL[c.role ?? roleOf(c.image, c.name)], techOf(c.image, c.name)?.label].filter(Boolean).join(' · ')}</Pill>
                 <span className="text-sm text-muted">{[c.domains[0], c.server.name].filter(Boolean).join(' · ')}</span>
                 <ActionForm action={addFromContainerAction} success={`${c.name} añadido`}>
                   <input type="hidden" name="projectId" value={projectId} /><input type="hidden" name="containerId" value={c.id} /><input type="hidden" name="environment" value={environment} />
