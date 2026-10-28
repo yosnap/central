@@ -6,7 +6,7 @@ export const ROLE_LABEL: Record<string, string> = {
 }
 
 const RULES: [string, RegExp][] = [
-  ['database', /postgres|postgis|mysql|mariadb|mongo|clickhouse|cockroach|timescale|supabase\/postgres|pgvector|couchdb|neo4j|qdrant|weaviate|meilisearch|elasticsearch|opensearch|typesense/],
+  ['database', /pgweb|adminer|phpmyadmin|pgadmin|postgres|postgis|mysql|mariadb|mongo|clickhouse|cockroach|timescale|supabase\/postgres|pgvector|couchdb|neo4j|qdrant|weaviate|meilisearch|elasticsearch|opensearch|typesense/],
   ['cache', /redis|valkey|memcached|dragonfly|keydb/],
   ['queue', /rabbitmq|kafka|nats|redpanda|mosquitto|emqx/],
   ['proxy', /traefik|nginx-proxy|caddy|haproxy|envoy/],
@@ -17,7 +17,9 @@ const RULES: [string, RegExp][] = [
 ]
 
 export function roleOf(image: string | null | undefined, name: string): string {
-  const text = `${image ?? ''} ${name}`.toLowerCase()
+  // Easypanel llama a las imágenes que construye «easypanel/<proyecto>/<servicio>»: son apps, no el panel
+  const own = image && /^easypanel\/[^/]+\/[^/]+/.test(image) ? null : image
+  const text = `${own ?? ''} ${name}`.toLowerCase()
   for (const [role, re] of RULES) if (re.test(text)) return role
   // por el nombre: «proyecto_db», «proyecto-redis-1»…
   if (/(^|[_.-])(db|database|pg)([_.-]|\d|$)/.test(name.toLowerCase())) return 'database'

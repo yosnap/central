@@ -47,7 +47,8 @@ export async function linkContainer(containerId: string, target: string, environ
     const existing = project.services.find((s) => s.url && hosts.has(hostOf(s.url) ?? '')) ?? project.services.find((s) => s.name === name && s.environment === env && !s.serverId)
     if (existing) serviceId = existing.id
     else {
-      const url = c.domains[0] ? `https://${c.domains[0]}` : null
+      // solo las webs se vigilan por su dominio; el de un visor de base de datos no es la web del proyecto
+      const url = name === 'web' && c.domains[0] ? `https://${c.domains[0]}` : null
       // con dominio, se vigila como cualquier servicio con URL (Webs y Uptime Kuma)
       const site = url ? await prisma.website.upsert({
         where: { url },
@@ -62,8 +63,17 @@ export async function linkContainer(containerId: string, target: string, environ
       if (site) void import('../kuma').then((k) => k.syncKuma()).catch(() => {})
     }
   } else throw new Error('Destino no válido')
+  // una web enlazada a un servicio sin URL le da su dominio
+  const isWeb = !c.role || c.role === 'app' || c.role === 'other'
+  if (isWeb && c.domains[0]) {
+    const svc = await prisma.projectService.findUniqueOrThrow({ where: { id: serviceId }, select: { url: true } })
+    if (!svc.url) await prisma.projectService.update({ where: { id: serviceId }, data: { url: `https://${c.domains[0]}`, monitor: true } })
+  }
   await prisma.projectService.update({ where: { id: serviceId }, data: { serverId: c.serverId } })
   await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: serviceId, matchManual: true } })
+  // un servicio de producción en un servidor: si el proyecto no decía nada de su despliegue, está en producción
+  const svc = await prisma.projectService.findUniqueOrThrow({ where: { id: serviceId }, select: { environment: true, projectId: true } })
+  if (svc.environment === 'production') await prisma.project.updateMany({ where: { id: svc.projectId, deployStatus: 'UNKNOWN' }, data: { deployStatus: 'PRODUCTION' } })
   // la versión de lo que corre ahí pasa al servicio (y, si es producción, al proyecto)
   await refreshServiceVersion(serviceId, { force: true })
 }

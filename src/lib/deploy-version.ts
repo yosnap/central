@@ -32,7 +32,7 @@ async function findVersionPath(url: string) {
 export async function refreshServiceVersion(serviceId: string, { force = false } = {}) {
   const s = await prisma.projectService.findUnique({
     where: { id: serviceId },
-    select: { id: true, url: true, versionPath: true, environment: true, projectId: true, liveVersionAt: true, containers: { select: { version: true, image: true } } },
+    select: { id: true, url: true, versionPath: true, environment: true, projectId: true, liveVersionAt: true, containers: { select: { version: true, image: true, role: true } } },
   })
   if (!s) return null
   let version: string | null = null
@@ -44,10 +44,12 @@ export async function refreshServiceVersion(serviceId: string, { force = false }
       if (found) ({ path: versionPath, version } = found)
     }
   }
-  version ??= s.containers.map((c) => c.version ?? versionFromImage(c.image)).find(Boolean) ?? null
+  // solo la versión de la aplicación: la de una base de datos o su visor (postgres:17, pgweb:0.16.2) no es la del proyecto
+  const apps = s.containers.filter((c) => !c.role || c.role === 'app' || c.role === 'other')
+  version ??= apps.map((c) => c.version ?? versionFromImage(c.image)).find(Boolean) ?? null
   const now = new Date()
   // también cuando no hay versión: así la búsqueda de ruta no se repite cada 10 minutos
-  await prisma.projectService.update({ where: { id: s.id }, data: { liveVersionAt: now, ...(version ? { liveVersion: version } : {}), ...(versionPath !== s.versionPath ? { versionPath } : {}) } })
-  if (version && s.environment === 'production') await prisma.project.update({ where: { id: s.projectId }, data: { deployedVersion: version } })
+  await prisma.projectService.update({ where: { id: s.id }, data: { liveVersionAt: now, liveVersion: version, ...(versionPath !== s.versionPath ? { versionPath } : {}) } })
+  if (version && s.environment === 'production' && (s.url || apps.length)) await prisma.project.update({ where: { id: s.projectId }, data: { deployedVersion: version } })
   return version
 }

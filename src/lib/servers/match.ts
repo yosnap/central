@@ -8,6 +8,10 @@ const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/
 export const hostOf = (url: string) => { try { return new URL(/^https?:\/\//.test(url) ? url : `https://${url}`).hostname.toLowerCase() } catch { return null } }
 
 /** Servicios sin servidor cuyo dominio sirve un único servidor: se les asigna ese servidor. */
+/** Dominios que pone el panel por su cuenta (Easypanel, Coolify, Dokploy…): van detrás de los propios. */
+const PANEL_DOMAIN = /\.(easypanel\.host|traefik\.me|sslip\.io|nip\.io)$/
+export const sortDomains = (domains: string[]) => [...domains].sort((a, b) => Number(PANEL_DOMAIN.test(a)) - Number(PANEL_DOMAIN.test(b)))
+
 export async function assignServersByDomain() {
   const servers = await prisma.server.findMany({ select: { id: true, snapshot: true } })
   const byHost = new Map<string, string[]>()

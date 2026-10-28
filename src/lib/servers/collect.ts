@@ -6,7 +6,7 @@
 import type { Prisma, Server } from '../../generated/prisma/client'
 import { prisma } from '../prisma'
 import { exposedPorts } from './external'
-import { assignServersByDomain, matchContainers } from './match'
+import { assignServersByDomain, matchContainers, sortDomains } from './match'
 import { interpret } from './parse'
 import { refreshServiceVersion, versionFromImage } from '../deploy-version'
 import { roleOf } from './role'
@@ -91,7 +91,7 @@ export async function readServer(server: Server) {
       const state = !s.ok ? 'down' : s.stopped ? 'stopped' : 'ok'
       // sin la sección de detalle (script antiguo) se conservan la imagen y los dominios que hubiera
       const det = r.details?.[s.name]
-      const extra = r.details ? { image: det?.image ?? null, domains: det?.domains ?? [], version: det?.version ?? versionFromImage(det?.image), startedAt: det?.startedAt ?? null } : {}
+      const extra = r.details ? { image: det?.image ?? null, domains: sortDomains(det?.domains ?? []), version: det?.version ?? versionFromImage(det?.image), startedAt: det?.startedAt ?? null } : {}
       const role = roleOf(det?.image, s.name)
       const saved = await prisma.serverContainer.upsert({
         where: { serverId_name: { serverId: server.id, name: s.name } },
