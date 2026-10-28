@@ -12,7 +12,7 @@ import { SecretFormModal } from './secret-form-modal'
 import type { BackupRow, SecretRow } from './types'
 import { UnlockProvider, UnlockStatus, useUnlock } from './unlock-provider'
 
-type Props = { projectId: string; fileBase: string; secrets: SecretRow[]; backups: BackupRow[]; unlockedUntil: number | null }
+type Props = { projectId: string; fileBase: string; secrets: SecretRow[]; backups: BackupRow[]; unlockedUntil: number | null; serverEnvs: string[] }
 
 export function SecretsPanel(props: Props) {
   const [revealed, setRevealed] = useState<Record<string, string>>({})
@@ -23,7 +23,7 @@ export function SecretsPanel(props: Props) {
   )
 }
 
-function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }: Props & { revealed: Record<string, string>; setRevealed: (r: Record<string, string>) => void }) {
+function Panel({ projectId, fileBase, secrets, backups, serverEnvs, revealed, setRevealed }: Props & { revealed: Record<string, string>; setRevealed: (r: Record<string, string>) => void }) {
   const { withUnlock } = useUnlock()
   const [env, setEnv] = useState('production')
   const [editing, setEditing] = useState<SecretRow | null>(null)
@@ -59,7 +59,8 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
     if (!r) return
     if ('error' in r) toast.error(r.error)
     else if ('queued' in r) toast.success('Pedido al Mac: la copia aparecerá en unos segundos (recarga la página)')
-    else if (r.saved) toast.success(`Copia nueva con ${r.count} variables de ${r.from.join(', ')}`)
+    else if (r.saved) toast.success(`${r.count} variables de ${r.from.join(', ')}: secretos actualizados y copia nueva`)
+    else if (r.applied) toast.success(`${r.count} variables de ${r.from.join(', ')} añadidas a los secretos`)
     else toast.info('Sin cambios desde la última copia: no se guarda otra')
   }
 
@@ -82,7 +83,7 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
       <div className="flex flex-wrap gap-3">
         <Button onClick={() => { setEditing(null); setFormOpen(true) }}><Plus className="size-5" aria-hidden />Añadir secreto</Button>
         <Button variant="secondary" onClick={() => setImportOpen(true)}><FileUp className="size-5" aria-hidden />Importar .env</Button>
-        <Button variant="secondary" onClick={pullFromServer} disabled={pulling}><Server className="size-5" aria-hidden />{pulling ? 'Copiando…' : 'Copiar del servidor'}</Button>
+        {serverEnvs.includes(env) && <Button variant="secondary" onClick={pullFromServer} disabled={pulling}><Server className="size-5" aria-hidden />{pulling ? 'Copiando…' : 'Copiar del servidor'}</Button>}
         <Button variant="secondary" onClick={exportFile} disabled={!rows.length}><Download className="size-5" aria-hidden />Descargar .env</Button>
         <ActionForm action={backupNow} success="Copia guardada">
           <input type="hidden" name="projectId" value={projectId} />

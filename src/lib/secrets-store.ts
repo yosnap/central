@@ -69,11 +69,33 @@ export async function readTargets(targets: Pick<EnvTarget, 'host' | 'sshPort' | 
   return { entries: mergeEnv(lists), from }
 }
 
-/** En el Mac: lee el entorno desplegado y guarda una versión nueva de la copia si ha cambiado. */
+/** Añade o actualiza variables en los secretos del entorno, cifradas; no borra las que no vienen. */
+export async function applyEntries(projectId: string, environment: string, entries: EnvEntry[]) {
+  for (const e of entries) {
+    await prisma.projectSecret.upsert({
+      where: { projectId_environment_key: { projectId, environment, key: e.key } },
+      update: { value: encryptJson(e.value) },
+      create: { projectId, environment, key: e.key, value: encryptJson(e.value) },
+    })
+  }
+}
+
+/**
+ * Lo leído de los contenedores: si cambia respecto a la última copia, versión nueva de la copia y secretos al día con
+ * lo desplegado. Si no cambia, solo rellena los secretos cuando el entorno aún no tiene ninguno.
+ */
+export async function storeServerEnv(projectId: string, environment: string, entries: EnvEntry[]) {
+  const saved = await saveBackup(projectId, environment, entries, 'server')
+  const applied = saved || !(await prisma.projectSecret.count({ where: { projectId, environment } }))
+  if (applied) await applyEntries(projectId, environment, entries)
+  return { saved, applied }
+}
+
+/** En el Mac: lee el entorno desplegado y lo guarda (storeServerEnv). */
 export async function pullServerEnv(projectId: string, environment: string) {
   const targets = await envTargets(projectId, environment)
   if (!targets.length) throw new Error('Este entorno no tiene contenedores de un servidor enlazados')
   const { entries, from } = await readTargets(targets)
   if (!entries.length) throw new Error('Los contenedores no tienen variables propias')
-  return { saved: await saveBackup(projectId, environment, entries, 'server'), count: entries.length, from }
+  return { ...(await storeServerEnv(projectId, environment, entries)), count: entries.length, from }
 }

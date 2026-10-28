@@ -9,7 +9,7 @@ import { ENV_KEY, formatEnv, parseEnv, type EnvEntry } from './env-file'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { lock, unlockWithPassword, unlockedUntil } from './unlock'
-import { envTargets, pullServerEnv, saveBackup, type BackupSource } from './secrets-store'
+import { applyEntries, envTargets, pullServerEnv, saveBackup, type BackupSource } from './secrets-store'
 import { enqueue, isRemote, macOnline, pendingFor } from './worker'
 
 // Ninguna acción registra ni devuelve valores salvo las que exigen el desbloqueo.
@@ -123,11 +123,12 @@ export async function importLocalEnvFile(form: FormData) {
 }
 
 /**
- * Lee el entorno desplegado en los contenedores enlazados a los servicios del entorno y guarda una versión nueva de la
- * copia (origen «Servidor») solo si ha cambiado. No toca los secretos guardados: para usarlos, se restaura la copia.
+ * Lee el entorno desplegado en los contenedores enlazados a los servicios del entorno: si ha cambiado, guarda una
+ * versión nueva de la copia (origen «Servidor») y actualiza los secretos con esos valores (sin borrar los que solo
+ * están en Central).
  * En producción lo hace el trabajador del Mac (la clave de administración vive en el Mac).
  */
-export async function importFromServers(projectId: string, environment: string): Promise<Locked | { error: string } | { queued: true } | { saved: boolean; count: number; from: string[] }> {
+export async function importFromServers(projectId: string, environment: string): Promise<Locked | { error: string } | { queued: true } | { saved: boolean; applied: boolean; count: number; from: string[] }> {
   if (!(await requireUnlocked())) return LOCKED
   const env = Env.parse(environment)
   if (isRemote()) {
@@ -145,15 +146,7 @@ export async function importFromServers(projectId: string, environment: string):
   } catch (e) { return { error: (e as Error).message } }
 }
 
-async function saveEntries(projectId: string, environment: string, entries: EnvEntry[]) {
-  for (const e of entries) {
-    await prisma.projectSecret.upsert({
-      where: { projectId_environment_key: { projectId, environment, key: e.key } },
-      update: { value: encryptJson(e.value) },
-      create: { projectId, environment, key: e.key, value: encryptJson(e.value) },
-    })
-  }
-}
+const saveEntries = applyEntries
 
 async function importContent(d: z.infer<typeof ImportForm>) {
   const entries = parseEnv(d.content)

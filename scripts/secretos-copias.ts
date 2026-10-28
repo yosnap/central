@@ -13,7 +13,7 @@ for (const { projectId, environment } of await deployedEnvs()) {
   const label = `${names.get(projectId) ?? projectId} · ${environment}`
   try {
     const r = await pullServerEnv(projectId, environment)
-    console.log(`${r.saved ? 'copia nueva' : 'sin cambios'}  ${label} (${r.count} variables)`)
+    console.log(`${r.saved ? 'copia nueva' : r.applied ? 'rellenados ' : 'sin cambios'}  ${label} (${r.count} variables)`)
   } catch (e) {
     console.log(`error        ${label}: ${(e as Error).message}`)
   }

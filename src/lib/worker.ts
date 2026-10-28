@@ -8,7 +8,7 @@ import type { Prisma } from '@/generated/prisma/client'
 import { prisma } from './prisma'
 
 /** Tipos de trabajo que el trabajador sabe hacer; ningún otro se acepta. */
-export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit', 'server-install', 'container-env'] as const
+export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit', 'server-install', 'container-env', 'worktree'] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
 export const isRemote = () => process.env.CENTRAL_RUNTIME === 'production'
@@ -128,14 +128,21 @@ const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) 
     await prisma.server.update({ where: { id: serverId }, data: { adminUser: user, pausedUntil: null, nextAt: null } })
     await (await import('./servers/collect')).runServers({ force: true, ids: [serverId] })
   },
+  worktree: async (payload, done) => {
+    if (done.error) return
+    const r = done.result as { ok: boolean; error?: string }
+    if (!r.ok) throw new Error(r.error ?? 'No se pudo')
+    const p = payload as { action: 'remove' | 'prune'; locationId?: string; projectId?: string }
+    if (p.action === 'remove' && p.locationId) await prisma.projectLocation.deleteMany({ where: { id: p.locationId } })
+    if (p.action === 'prune' && p.projectId) await prisma.projectLocation.deleteMany({ where: { projectId: p.projectId, missing: true } })
+  },
   'container-env': async (payload, done) => {
     if (done.error) return
     const { projectId, environment } = payload as { projectId: string; environment: string }
     const { entries, from, errors } = done.result as { entries: import('./env-file').EnvEntry[]; from: string[]; errors: string[] }
     if (!entries.length) throw new Error(errors[0] ?? 'Los contenedores no tienen variables propias')
-    const { saveBackup } = await import('./secrets-store')
-    const saved = await saveBackup(projectId, environment, entries, 'server')
-    return { saved, count: entries.length, from, errors }
+    const { storeServerEnv } = await import('./secrets-store')
+    return { ...(await storeServerEnv(projectId, environment, entries)), count: entries.length, from, errors }
   },
 }
 
