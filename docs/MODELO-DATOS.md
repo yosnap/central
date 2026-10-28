@@ -8,7 +8,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `Project` | 1 | Proyecto de código. `kind` (cliente, propio, formación, experimento), `status` (activo, mantenimiento, parado, archivo), `phase` libre, versión, framework, stack, datos git |
 | `Project` (despliegue) | 1 | `deployStatus` (sin indicar, sin desplegar, en pruebas, en producción, retirado), `hosting`, `deployedVersion`, `reviewedAt` (null = nuevo sin revisar) |
 | `ProjectService` | 1 | Dominios y servicios del proyecto por entorno (web, api, admin, n8n…), con URL, hosting y notas. Si tiene URL y `monitor`, crea/enlaza su `Website` para el uptime. `versionPath` (opcional) se lee en cada comprobación y guarda `liveVersion`; si es de producción, rellena `Project.deployedVersion` |
-| `Project` (qué es) | 1.5 | `type` (web, aplicación, e-commerce, API, addon, plugin/tema, app móvil, escritorio, extensión, MCP/CLI/librería, automatización, contenido), `platform` (WordPress, WooCommerce, PrestaShop, Shopify, n8n, Chrome, Elementor, otra) y `parentId` (sistema propio). Los confirma el usuario; el escáner solo escribe `suggestedType`, `suggestedPlatform` y `suggestedDomains` |
+| `Project` (qué es) | 1.5 | `type` (web, aplicación, e-commerce, API, addon, plugin/tema, app móvil, escritorio/utilidad para Mac y Windows, extensión, MCP/CLI/librería, skill de agente, automatización, contenido), `platform` (WordPress, WooCommerce, PrestaShop, Shopify, n8n, Chrome, Elementor, otra) y `parentId` (sistema propio). Los confirma el usuario; el escáner solo escribe `suggestedType`, `suggestedPlatform` y `suggestedDomains` |
 | `Installation` | 1.5 | Dónde está instalado un plugin, tema o addon: proyecto, web, versión, notas, fecha. Único por proyecto y web |
 | `Project` (frente a origin) | 2 | `branchStatus` (ramas con upstream, por delante y por detrás; una rama sin upstream configurado se compara con la remota del mismo nombre y queda marcada `implicit`), `localOnlyBranches` (con commits que no están en ningún remoto), `remoteOnlyBranches`, `stashCount`, `aheadTotal` (commits en ningún remoto), `behindTotal` (rama actual), `lastFetchAt`, `fetchError` |
 | `RepoRemote` | 2 | Cada remoto git del proyecto: proveedor (GitHub, GitLab, Gitea, otro), host, `titular/repo`, y del proveedor visibilidad, rama por defecto, último push, PRs/MRs, issues, CI, último release, archivado, error y fecha de sincronización |
@@ -22,6 +22,8 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `ScanRoot` | 1 | Carpetas raíz escaneadas y cuándo |
 | `Website` | 1 | Web con `kind` (cliente, propia, centralizada), último estado, código y ms |
 | `Website` (Uptime Kuma) | 3a | `kumaMonitorId` (monitor creado por Central), `kumaStatus`, `kumaMs`, `sslDaysLeft`, `kumaCheckedAt`, leídos de `/metrics` |
+| `ProjectAdvisory` | 3c | Vulnerabilidad de una dependencia (osv-scanner) o rama del framework sin soporte (endoflife.date): aviso (GHSA/CVE o `EOL:producto-rama`), paquete, ecosistema, versión instalada, `fixedIn`, gravedad, resumen, enlace, `dev`, `lockfile` de origen, `firstSeenAt`/`lastSeenAt`, `resolvedAt` (ya no aparece; se borra a los 90 días) e `ignoredAt` (descartado a mano). Único por proyecto, aviso, paquete y versión |
+| `Project` / `Server` (Uptime Kuma push) | 3c | `kumaPushId` y `kumaPushToken`: monitor push «Proyecto · dependencias» o «Servidor · parches de seguridad». En `Project`, también `auditedAt` y `auditError` de la última auditoría |
 | `UptimeCheck` | 1 | Historial de comprobaciones (30 días) |
 | `Server` | 3b | Servidor vigilado por SSH: nombre, host, puerto, usuario de recogida (`infobar`), ruta de la clave (nunca la clave), proveedor, panel y su URL, IPs conocidas, `allowMail`, intervalos normal e incidencia, estado global y vivo, error, próxima lectura, pausa tras rechazo y `snapshot` (última lectura buena interpretada) |
 | `ServerSample` / `ServerHour` | 3b | Muestras de cada lectura (7 días) y agregado por hora (90 días): CPU, memoria, disco, servicios, sesiones, intentos, puertos expuestos, estado |
@@ -55,6 +57,8 @@ Fuente de verdad: `prisma/schema.prisma`.
 
 ## Información pendiente
 
-Las reglas viven en `src/lib/completeness.ts` (`projectIssues`). Hoy avisan de: proyecto nuevo sin revisar, despliegue sin indicar, en producción o pruebas sin servicios o sin hosting, proyecto de cliente sin cliente, sin fase y sin descripción. Solo cuentan los proyectos de clientes y propios no archivados; el contador de la navegación muestra los activos y en mantenimiento.
+Las reglas viven en `src/lib/completeness.ts` (`projectIssues`). Hoy avisan de: proyecto nuevo sin revisar, despliegue sin indicar, en producción o pruebas sin servicios o sin hosting, vulnerabilidades graves por actualizar (`ALERT_WHERE`: críticas o altas, de producción, con versión corregida, ni resueltas ni ignoradas), proyecto de cliente sin cliente, sin fase y sin descripción. Solo cuentan los proyectos de clientes y propios no archivados; el contador de la navegación muestra los activos y en mantenimiento.
+
+Las herramientas que se instalan (`TOOL_TYPES`: app de escritorio o utilidad, MCP/CLI/librería y skill de agente) no piden despliegue, hosting, dominios ni descripción, y su ficha no muestra «Despliegue». Addons, plugins y contenido tampoco piden despliegue. El escáner propone «skill de agente» si encuentra `SKILL.md`, `.claude-plugin` o `skills/<nombre>/SKILL.md`, y «MCP/CLI/librería» solo si el SDK de MCP no viene con un frontend.
 
 Para pedir un dato nuevo: añade el campo al modelo, al formulario de la ficha y una regla en `projectIssues`.

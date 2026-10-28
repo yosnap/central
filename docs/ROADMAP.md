@@ -51,6 +51,12 @@ La visión completa está en `VISION.md`. Aquí, el orden de construcción.
 - [x] Lectura de `/metrics` para mostrar estado, ms y días de SSL en Webs y en la ficha
 - [ ] Opcional: páginas de estado por cliente; webhook a n8n
 
+## Fase 3c — Vulnerabilidades y parches de seguridad (hecha, 2026-10-27)
+
+- [x] Auditoría diaria de dependencias de los proyectos en producción con osv-scanner, más soporte del framework (endoflife.date); `ProjectAdvisory`
+- [x] Tarjeta «Seguridad» en la ficha (ignorar, auditar ahora) y aviso en Pendientes
+- [x] Monitores push en Uptime Kuma: dependencias por proyecto y parches de seguridad por servidor (ver `docs/SERVIDORES.md` §0)
+
 ## Fase 3b — Servidores (modelo CostGuard / infobar)
 
 - [x] Decidido: opción A (Central lee con los mismos scripts remotos); Central es la fuente y CostGuard lee de Central — ver `SERVIDORES.md` §1

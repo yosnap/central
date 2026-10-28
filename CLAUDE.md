@@ -36,7 +36,8 @@ bun run scan [-- <carpeta>] [--csv salida.csv] [--map /local=/real]
 bun run websites:import inventario/webs.txt
 bun run uptime
 bun run servidores        # lee los servidores a los que les toca (-- --todos: todos ya)
-bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto (también tareas:quitar, tareas:estado)
+bun run auditoria         # vulnerabilidades de dependencias de los proyectos en producción (requiere brew install osv-scanner)
+bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto, auditoría cada día (también tareas:quitar, tareas:estado)
 bun run mcp
 bun run produccion:variables   # variables de producción al portapapeles para Dokploy (sin mostrarlas)
 bun run trabajador:instalar    # trabajador del Mac en launchd (con Central en producción; también :quitar y :estado)
@@ -55,6 +56,7 @@ src/lib/servers/            lectura SSH, parseo, estados y protección, puertos 
 scripts/import-websites.ts  alta masiva de webs desde un .txt
 src/lib/scanner.ts          lógica del escáner (sin dependencias de Next)
 src/lib/uptime.ts           comprobador de uptime
+src/lib/audit*.ts           auditoría de dependencias (osv-scanner, endoflife.date); estado a Uptime Kuma en kuma-push.ts
 src/lib/completeness.ts     reglas de información pendiente (un único sitio)
 src/lib/quotes.ts           cálculos de presupuestos (céntimos, totales y rangos, hitos, numeración); contenido común en quote-doc.ts, PDF en quote-pdf.tsx, Word en quote-docx.ts
 src/lib/google.ts           Google con OAuth propio: Gmail (solo lectura) y Calendar; agenda en agenda.ts, ligar a cliente/proyecto en link-targets.ts
@@ -67,7 +69,8 @@ src/lib/sn4p.ts             cliente de la API del portfolio sn4p.dev
 src/lib/prisma.ts           cliente Prisma (singleton)
 src/lib/auth.ts, session.ts sesión monousuario con cookie firmada (HMAC)
 src/proxy.ts                redirige a /login sin cookie
-src/app/                    páginas: / (resumen), pendientes, proyectos, webs, servidores, clientes, presupuestos, agenda, correo, ajustes, login
+src/lib/alerts.ts           centro de alertas (campana de la navegación y /alertas): un único sitio para decidir qué es alerta
+src/app/                    páginas: / (resumen), alertas, pendientes, proyectos, webs, servidores, clientes, presupuestos, agenda, correo, ajustes, login
 src/app/api/cron/uptime     endpoint para el cron de uptime (token)
 src/app/api/servidores      lista y estado de servidores para CostGuard (CENTRAL_API_TOKEN)
 src/mcp/server.ts           servidor MCP

@@ -39,6 +39,13 @@ Tres piezas:
 - Ajustes de Central guardará la conexión: URL de Uptime Kuma, usuario/clave y clave de API de métricas, cifrados (`IntegrationConnection`, proveedor `UPTIME_KUMA`).
 - **Páginas de estado por cliente** (opcional): una página pública de Uptime Kuma con las webs de cada cliente para compartirla.
 
+### Vulnerabilidades y parches de seguridad (monitores push)
+
+- **Qué se audita**: cada proyecto en producción (`AUDIT_WHERE` en `src/lib/audit-import.ts`: despliegue en producción, entorno de producción marcado o algún servicio de producción), desde su carpeta principal, una vez al día con `osv-scanner` (lockfiles de npm/bun/pnpm/yarn, composer, pip, go, cargo, pub; sin carpetas ocultas ni `node_modules`). El framework del escáner se contrasta con endoflife.date: una rama sin soporte cuenta como aviso alto.
+- **Dónde se ejecuta**: en el Mac. En local, tarea de launchd diaria (`bun run auditoria`, instalada con `tareas:instalar`). Con Central en producción, el trabajador recibe un trabajo `audit` al día con las rutas, y solo audita las que están dentro de `CENTRAL_WORKER_ROOTS`. Requisito: `brew install osv-scanner`.
+- **Qué avisa** (`ALERT_WHERE` en `src/lib/completeness.ts`): vulnerabilidades críticas o altas, no de desarrollo, con versión corregida, ni resueltas ni ignoradas. Entran en Pendientes; la ficha del proyecto las lista todas en «Seguridad», donde se puede ignorar cada una, auditar en el momento o copiar y descargar las abiertas como issue de GitHub en Markdown (`src/lib/audit-markdown.ts`: paquetes a actualizar con casillas, tabla de detalle y pasos para cerrarlo).
+- **Uptime Kuma**: `syncKuma()` crea un monitor push por proyecto en producción («Proyecto · dependencias») y por servidor ya leído («Servidor · parches de seguridad», con los `parches_seguridad` de la última lectura). `pushSecurity()` (`src/lib/kuma-push.ts`) envía el estado con cada comprobación de webs (script `uptime` y `/api/cron/uptime`): `down` con el resumen (paquete, versión instalada → versión que lo corrige) o `up`. El monitor espera un envío cada hora, así que también cae si Central deja de enviar; un proyecto sin auditoría en 3 días se pone en rojo. Mientras sigue en rojo, Kuma repite el aviso una vez al día.
+
 ---
 
 ## 1. Cómo se recoge (modelo infobar, sin agente)
@@ -117,7 +124,8 @@ Retención: muestras detalladas 7 días, agregados por hora 90 días (igual que 
 - Servidor en rojo o gris → aviso en Resumen y en la navegación, con los proyectos afectados.
 - Protección incompleta → aparece en **Pendientes** del servidor con el comando para arreglarlo.
 - Web caída o lenta → aviso en Resumen *(hecho para caídas)*.
-- Más adelante: notificación a Telegram/correo/n8n cuando algo pase a rojo.
+- **Centro de alertas** (`src/lib/alerts.ts`, calculado al momento, sin tabla propia): campana en la navegación con el número y las más graves, y `/alertas` con todas en una tabla filtrable por tipo. Críticas: web caída, certificado a ≤ 3 días, servidor en rojo (con el motivo: puertos de más, servicios caídos, CPU/memoria/disco, protección crítica) o sin datos, vulnerabilidad crítica por actualizar. Avisos: web lenta (> 1500 ms), certificado a ≤ 14 días, protección incompleta, reinicio pendiente, parches de seguridad, vulnerabilidad alta, auditoría fallida o con más de 3 días.
+- Notificaciones fuera de Central: Uptime Kuma (webs, dependencias y parches de seguridad; ver §0).
 
 ## 6. MCP
 
