@@ -15,6 +15,7 @@
     "db:studio": "bunx prisma studio",
     "scan": "bun scripts/scan.ts",
     "uptime": "bun scripts/uptime.ts",
+    "auditoria": "bun scripts/auditoria.ts",
     "servidores": "bun scripts/servidores.ts",
     "repos:sync": "bun scripts/repos-sync.ts",
     "tarea:horaria": "bun scripts/scan.ts --fetch-active && bun scripts/repos-sync.ts --active",

@@ -8,13 +8,14 @@ import type { Prisma } from '@/generated/prisma/client'
 import { prisma } from './prisma'
 
 /** Tipos de trabajo que el trabajador sabe hacer; ningún otro se acepta. */
-export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file'] as const
+export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit'] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
 export const isRemote = () => process.env.CENTRAL_RUNTIME === 'production'
 const ONLINE_MS = 60_000
 const STALE_MS = 15 * 60_000
 const SCAN_EVERY_MS = 60 * 60_000
+const AUDIT_EVERY_MS = 24 * 60 * 60_000
 
 /** Las fechas viajan como texto en el JSON del trabajador: se vuelven a convertir en fechas al importar. */
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
@@ -63,6 +64,12 @@ export async function beatAndClaim(info: { hostname?: string; version?: string; 
   // escaneo cada hora mientras el Mac esté conectado (lo que antes hacía la tarea horaria del Mac)
   const lastScan = await prisma.workerJob.findFirst({ where: { type: 'scan' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } })
   if (!lastScan || now.getTime() - lastScan.createdAt.getTime() > SCAN_EVERY_MS) await enqueueScan('active')
+  // auditoría de dependencias de los proyectos en producción una vez al día
+  const lastAudit = await prisma.workerJob.findFirst({ where: { type: 'audit' }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } })
+  if (!lastAudit || now.getTime() - lastAudit.createdAt.getTime() > AUDIT_EVERY_MS) {
+    const { auditTargets } = await import('./audit-import')
+    await enqueue('audit', { targets: (await auditTargets()).map(({ projectId, path }) => ({ projectId, path })) })
+  }
   const pending = await prisma.workerJob.findMany({ where: { status: 'pending' }, orderBy: { createdAt: 'asc' }, take: limit })
   const claimed = []
   for (const j of pending) {
@@ -93,6 +100,13 @@ const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) 
     await importProjects(projects, roots, pathMap(), () => {}, (p) => there.has(p))
     // estado de los repositorios en GitHub/GitLab con el token de Ajustes (en producción no hay sesión de gh)
     await (await import('./repo-sync')).syncRepos({ activeOnly: true }).catch(() => {})
+  },
+  audit: async (_payload, done) => {
+    if (done.error) return
+    const { results } = done.result as { results: ({ projectId: string; findings: import('./audit').Finding[] } | { projectId: string; error: string })[] }
+    const { importAudit } = await import('./audit-import')
+    for (const r of results) await importAudit(r.projectId, 'error' in r ? { error: r.error } : { findings: r.findings })
+    await (await import('./kuma-push')).pushSecurity().catch(() => null)
   },
 }
 

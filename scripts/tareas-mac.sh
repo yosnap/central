@@ -2,7 +2,8 @@
 # Tareas programadas de Central en este Mac (launchd):
 #   cada hora, escaneo (con git fetch de los activos) y consulta a los proveedores de repositorios;
 #   cada 10 minutos, comprobación de webs;
-#   cada minuto, lectura de los servidores a los que les toca (5 min, o 1 min en incidencia).
+#   cada minuto, lectura de los servidores a los que les toca (5 min, o 1 min en incidencia);
+#   cada día, auditoría de dependencias de los proyectos en producción (osv-scanner).
 # Uso: scripts/tareas-mac.sh instalar | quitar | estado
 set -euo pipefail
 
@@ -10,7 +11,7 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
 AGENTS="$HOME/Library/LaunchAgents"
 LOGS="$HOME/Library/Logs/Central"
-TAREAS=("com.iservisat.central.scan|tarea:horaria|3600" "com.iservisat.central.uptime|uptime|600" "com.iservisat.central.servidores|servidores|60")
+TAREAS=("com.iservisat.central.scan|tarea:horaria|3600" "com.iservisat.central.uptime|uptime|600" "com.iservisat.central.servidores|servidores|60" "com.iservisat.central.auditoria|auditoria|86400")
 
 plist() { # id script intervalo
   cat <<EOF

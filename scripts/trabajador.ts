@@ -12,6 +12,7 @@ import fs from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { z } from 'zod'
+import { auditDir } from '../src/lib/audit'
 import { runAssistant } from '../src/lib/claude-cli'
 import { pathMap, scanRoots } from '../src/lib/scan-roots'
 
@@ -44,6 +45,7 @@ const Assistant = z.object({
   files: z.array(safeName).max(20),
 })
 
+const Audit = z.object({ targets: z.array(z.object({ projectId: z.string().regex(/^[\w-]{1,40}$/), path: z.string().max(1000) })).max(2000) })
 const Scan = z.object({ fetch: z.enum(['none', 'active', 'all']), known: z.array(z.string().max(1000)).max(20_000) })
 
 const handlers: Record<string, (payload: unknown) => Promise<unknown>> = {
@@ -58,6 +60,17 @@ const handlers: Record<string, (payload: unknown) => Promise<unknown>> = {
     const inside = (p: string) => roots.some((r) => p === r || p.startsWith(r.replace(/\/$/, '') + '/'))
     const projects = scanRoots(roots, pathMap(), log, fetch)
     return { roots, projects, existing: [...roots, ...known.filter((p) => inside(p) && existsSync(p))] }
+  },
+
+  /** Auditoría de dependencias (osv-scanner) de las carpetas de proyecto que estén dentro de CENTRAL_WORKER_ROOTS. */
+  async audit(payload) {
+    const { targets } = Audit.parse(payload)
+    const inside = (p: string) => path.isAbsolute(p) && !p.split('/').includes('..') && ROOTS.some((r) => p.startsWith(r.replace(/\/$/, '') + '/'))
+    const results = []
+    for (const t of targets.filter((x) => inside(x.path) && existsSync(x.path))) {
+      try { results.push({ projectId: t.projectId, findings: await auditDir(t.path) }) } catch (e) { results.push({ projectId: t.projectId, error: (e as Error).message }) }
+    }
+    return { results }
   },
 
   /** Una vuelta del asistente de presupuestos: baja los documentos nuevos a su carpeta y ejecuta Claude Code. */

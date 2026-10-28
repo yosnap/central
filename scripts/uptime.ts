@@ -6,6 +6,8 @@ const { syncKuma } = await import('../src/lib/kuma')
 try {
   const k = await syncKuma()
   if (k) console.log(`Uptime Kuma: ${k.created} creados, ${k.updated} actualizados, ${k.deleted} borrados`)
+  const s = await (await import('../src/lib/kuma-push')).pushSecurity()
+  if (s) console.log(`Uptime Kuma: estado de seguridad enviado a ${s.sent} monitores${s.failed ? `, ${s.failed} fallidos` : ''}`)
 } catch (e) {
   console.log(`Uptime Kuma: ${e instanceof Error ? e.message : 'error'}`)
 }

@@ -124,6 +124,11 @@ model Project {
   videoChannels   VideoChannelLink[]
   secrets         ProjectSecret[]
   envBackups      EnvBackup[]
+  advisories      ProjectAdvisory[]
+  auditedAt       DateTime?     // última auditoría de dependencias (osv-scanner)
+  auditError      String?
+  kumaPushId      Int?          // monitor push de Uptime Kuma «Proyecto · dependencias»
+  kumaPushToken   String?
   scannedAt       DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -137,6 +142,30 @@ enum LocationKind {
   WORKTREE
   COPY    // otra carpeta con el mismo repo o el mismo nombre
   BACKUP
+}
+
+// Vulnerabilidad de una dependencia (osv-scanner) o rama del framework sin soporte (endoflife.date)
+model ProjectAdvisory {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  advisoryId  String    // GHSA-…, CVE-… o EOL:nextjs-14
+  package     String
+  ecosystem   String    // npm, Packagist, PyPI, Go… o framework
+  installed   String
+  fixedIn     String?   // primera versión corregida (o rama con soporte)
+  severity    String    // critical | high | moderate | low | unknown
+  summary     String?
+  url         String?
+  dev         Boolean   @default(false) // dependencia solo de desarrollo
+  lockfile    String?   // de qué lockfile sale, relativo a la carpeta (bun.lock, docs/site/package-lock.json…)
+  firstSeenAt DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  resolvedAt  DateTime? // ya no aparece en la auditoría
+  ignoredAt   DateTime? // descartado a mano: no avisa
+
+  @@unique([projectId, advisoryId, package, installed])
+  @@index([projectId, resolvedAt])
 }
 
 model ProjectLocation {
@@ -209,6 +238,7 @@ enum ProjectType {
   DESKTOP_APP
   BROWSER_EXTENSION
   LIBRARY
+  SKILL // skill de agente (Claude Code, Codex…): repositorio de skills o plugin
   AUTOMATION
   CONTENT
 }
@@ -664,6 +694,8 @@ model Server {
   attackIps     ServerAttackIp[]
   deployments   Deployment[]
   services      ProjectService[]
+  kumaPushId    Int?      // monitor push de Uptime Kuma «Servidor · parches de seguridad»
+  kumaPushToken String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }

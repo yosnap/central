@@ -18,11 +18,19 @@ export interface ProjectForCheck {
   platform: Platform | null
   parentId: string | null
   repoUrl: string | null
-  _count: { services: number }
+  _count: { services: number; advisories: number }
 }
 
+/** Herramientas que se instalan (utilidades de escritorio, MCP, CLI, librerías, skills): sin dominios ni descripción obligatoria. */
+export const TOOL_TYPES: ProjectType[] = ['DESKTOP_APP', 'LIBRARY', 'SKILL']
 /** Tipos que no se despliegan por sí mismos: no se les pide despliegue, hosting ni servicios. */
-export const NOT_DEPLOYED_TYPES: ProjectType[] = ['ADDON', 'PLUGIN', 'CONTENT']
+export const NOT_DEPLOYED_TYPES: ProjectType[] = ['ADDON', 'PLUGIN', 'CONTENT', ...TOOL_TYPES]
+
+/** Vulnerabilidades que obligan a actualizar: críticas o altas, de producción, con versión corregida, ni resueltas ni ignoradas.
+ *  Las mismas ponen en rojo el monitor «dependencias» de Uptime Kuma. */
+export const ALERT_WHERE = {
+  resolvedAt: null, ignoredAt: null, dev: false, severity: { in: ['critical', 'high'] }, fixedIn: { not: null },
+} satisfies Prisma.ProjectAdvisoryWhereInput
 
 export interface Issue {
   key: string
@@ -41,9 +49,10 @@ export function projectIssues(p: ProjectForCheck): Issue[] {
   if (deployable && p.deployStatus === 'UNKNOWN') out.push({ key: 'deploy', label: 'Falta indicar si está desplegado' })
   if (deployable && live && p._count.services === 0) out.push({ key: 'services', label: 'Faltan los dominios y servicios' })
   if (deployable && live && !p.hosting) out.push({ key: 'hosting', label: 'Falta dónde está alojado' })
+  if (p._count.advisories) out.push({ key: 'advisories', label: `${p._count.advisories === 1 ? 'Una dependencia con vulnerabilidad grave' : `${p._count.advisories} vulnerabilidades graves`} por actualizar` })
   if (p.kind === 'CLIENT' && !p.clientId) out.push({ key: 'client', label: 'Falta el cliente' })
   if (!p.phase) out.push({ key: 'phase', label: 'Falta la fase' })
-  if (!p.description) out.push({ key: 'description', label: 'Falta una descripción' })
+  if (!p.description && !(p.type && TOOL_TYPES.includes(p.type))) out.push({ key: 'description', label: 'Falta una descripción' })
   return out
 }
 
@@ -54,7 +63,7 @@ export const CHECK_SELECT = {
   id: true, name: true, kind: true, status: true, reviewedAt: true, deployStatus: true, clientId: true,
   description: true, phase: true, hosting: true, type: true, platform: true, parentId: true, suggestedType: true, repoUrl: true, lastActivityAt: true, createdAt: true,
   client: { select: { name: true } },
-  _count: { select: { services: true } },
+  _count: { select: { services: true, advisories: { where: ALERT_WHERE } } },
 } as const satisfies Prisma.ProjectSelect
 
 export const DEPLOY_LABEL = {

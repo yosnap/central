@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { pushSecurity } from '@/lib/kuma-push'
 import { runUptime } from '@/lib/uptime'
 
 export const dynamic = 'force-dynamic'
@@ -9,5 +10,7 @@ export async function GET(req: Request) {
   const token = new URL(req.url).searchParams.get('token')
   if (!process.env.CRON_TOKEN || token !== process.env.CRON_TOKEN) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   const results = await runUptime()
+  // dependencias y parches de seguridad hacia los monitores push de Uptime Kuma
+  await pushSecurity().catch(() => null)
   return NextResponse.json({ checked: results.length, down: results.filter((r) => !r.up).map((r) => r.url) })
 }
