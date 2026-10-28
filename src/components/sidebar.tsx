@@ -3,6 +3,7 @@
 import { CalendarDays, FileText, FolderGit2, Globe, LayoutDashboard, ListTodo, Mail, Server, Settings, Shapes, Users } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { AlertsBell, type BellAlert } from './alerts-bell'
 import { cn } from './ui/cn'
 
 const NAV = [
@@ -19,15 +20,18 @@ const NAV = [
   { href: '/componentes', label: 'Componentes', Icon: Shapes },
 ] as const
 
-export function Sidebar({ pending }: { pending: { total: number; fresh: number } | null }) {
+export function Sidebar({ pending, alerts }: { pending: { total: number; fresh: number } | null; alerts: { total: number; critical: number; alerts: BellAlert[] } | null }) {
   const path = usePathname()
   const active = (href: string) => (href === '/' ? path === '/' : path.startsWith(href))
   return (
     <nav aria-label="Secciones" className="sticky top-0 z-30 flex shrink-0 gap-1 overflow-x-auto border-b border-line bg-panel px-4 py-3 lg:h-screen lg:w-72 lg:flex-col lg:overflow-y-auto lg:border-b-0 lg:border-r lg:px-5 lg:py-8">
-      <Link href="/" className="mr-4 flex items-center gap-3 px-2 text-2xl font-semibold tracking-tight lg:mb-8 lg:mr-0">
-        <span className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-on-accent">C</span>
-        <span className="hidden sm:inline">Central</span>
-      </Link>
+      <div className="mr-4 flex items-center justify-between gap-2 lg:mb-8 lg:mr-0">
+        <Link href="/" className="flex items-center gap-3 px-2 text-2xl font-semibold tracking-tight">
+          <span className="grid size-10 place-items-center rounded-xl bg-accent text-lg font-bold text-on-accent">C</span>
+          <span className="hidden sm:inline">Central</span>
+        </Link>
+        {alerts && <AlertsBell {...alerts} />}
+      </div>
       {NAV.map(({ href, label, Icon }) => (
         <Link
           key={href}

@@ -5,12 +5,12 @@ import type { ComponentProps, ReactNode } from 'react'
 import { cn } from './cn'
 
 /** Menú desplegable de acciones. */
-export function Menu({ trigger, children, align = 'end' }: { trigger: ReactNode; children: ReactNode; align?: 'start' | 'center' | 'end' }) {
+export function Menu({ trigger, children, align = 'end', className }: { trigger: ReactNode; children: ReactNode; align?: 'start' | 'center' | 'end'; className?: string }) {
   return (
     <M.Root>
       <M.Trigger asChild>{trigger}</M.Trigger>
       <M.Portal>
-        <M.Content align={align} sideOffset={6} className="z-50 min-w-56 rounded-2xl border border-line bg-panel p-1.5 text-ink shadow-xl">
+        <M.Content align={align} sideOffset={6} className={cn('z-50 min-w-56 rounded-2xl border border-line bg-panel p-1.5 text-ink shadow-xl', className)}>
           {children}
         </M.Content>
       </M.Portal>
