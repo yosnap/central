@@ -8,7 +8,7 @@ import type { Prisma } from '@/generated/prisma/client'
 import { prisma } from './prisma'
 
 /** Tipos de trabajo que el trabajador sabe hacer; ningún otro se acepta. */
-export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit'] as const
+export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit', 'server-install'] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
 export const isRemote = () => process.env.CENTRAL_RUNTIME === 'production'
@@ -19,7 +19,7 @@ const AUDIT_EVERY_MS = 24 * 60 * 60_000
 
 /** Las fechas viajan como texto en el JSON del trabajador: se vuelven a convertir en fechas al importar. */
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
-function revive(v: unknown): unknown {
+export function revive(v: unknown): unknown {
   if (typeof v === 'string') return ISO.test(v) ? new Date(v) : v
   if (Array.isArray(v)) return v.map(revive)
   if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, revive(x)]))
@@ -56,7 +56,7 @@ export function pendingFor(type: JobType, key: string, value: string) {
 }
 
 /** Latido del trabajador: apunta que está vivo, da por fallidos los trabajos colgados y le entrega los pendientes. */
-export async function beatAndClaim(info: { hostname?: string; version?: string; roots?: string[] }, limit = 3) {
+export async function beatAndClaim(info: { hostname?: string; version?: string; roots?: string[]; adminKey?: string }, limit = 3) {
   const now = new Date()
   await prisma.workerBeat.upsert({ where: { id: 'mac' }, update: { lastSeenAt: now, ...info }, create: { id: 'mac', lastSeenAt: now, ...info } })
   const stale = await prisma.workerJob.findMany({ where: { status: 'running', startedAt: { lt: new Date(now.getTime() - STALE_MS) } }, select: { id: true } })
@@ -107,6 +107,14 @@ const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) 
     const { importAudit } = await import('./audit-import')
     for (const r of results) await importAudit(r.projectId, 'error' in r ? { error: r.error } : { findings: r.findings })
     await (await import('./kuma-push')).pushSecurity().catch(() => null)
+  },
+  'server-install': async (payload, done) => {
+    if (done.error) return
+    const { serverId, user } = payload as { serverId: string; user: string }
+    const { ok, log } = done.result as { ok: boolean; log: string }
+    if (!ok) throw new Error(log.slice(-400))
+    await prisma.server.update({ where: { id: serverId }, data: { adminUser: user, pausedUntil: null, nextAt: null } })
+    await (await import('./servers/collect')).runServers({ force: true, ids: [serverId] })
   },
 }
 

@@ -8,7 +8,8 @@ import { visibleStatus } from '@/lib/servers/collect'
 import { linkOptions } from '@/lib/servers/link'
 import { ROOT_SCRIPT_VERSION } from '@/lib/servers/parse'
 import type { Snapshot } from '@/lib/servers/snapshot'
-import { ConnectionNotice } from '@/components/servers/connection-notice'
+import { ConnectionNotice, InstallJobNotice } from '@/components/servers/connection-notice'
+import { isRemote } from '@/lib/worker'
 import { InstallButton } from '@/components/servers/install-button'
 import { DeploymentsCard } from '@/components/deployments-card'
 import { ContainersCard } from '@/components/servers/containers-card'
@@ -57,9 +58,10 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
           </ConfirmAction>
         </div>}
       />
+      <InstallJobNotice serverId={s.id} />
       <ConnectionNotice server={s} />
       {snap && !s.error && (snap.rootVersion ?? 0) < ROOT_SCRIPT_VERSION && (
-        <Notice tone="info" title="Hay una versión nueva del script de lectura" className="mb-6" action={<InstallButton id={s.id} host={s.host} user={s.adminUser} label="Actualizar" variant="primary" />}>
+        <Notice tone="info" title="Hay una versión nueva del script de lectura" className="mb-6" action={<InstallButton id={s.id} host={s.host} user={s.adminUser} remote={isRemote()} label="Actualizar" variant="primary" />}>
           Con ella Central ve la imagen y los dominios de cada servicio Docker, y así reconoce mejor a qué proyecto pertenece.
         </Notice>
       )}
@@ -98,7 +100,7 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
       </div>
       <div className="mt-6">
         <DeploymentsCard serverId={s.id} className="mb-6" />
-        <ServerDetails server={s} action={<InstallButton id={s.id} host={s.host} user={s.adminUser} />} />
+        <ServerDetails server={s} action={<InstallButton id={s.id} host={s.host} user={s.adminUser} remote={isRemote()} />} />
       </div>
     </>
   )

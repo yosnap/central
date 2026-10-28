@@ -5,10 +5,11 @@
  */
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { appendFile, mkdir } from 'node:fs/promises'
+import { appendFile, mkdir, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { promisify } from 'node:util'
 import { prisma } from '../prisma'
+import { hostTarget, KNOWN_HOST_RE } from './install'
 import { runCollect } from './ssh'
 
 const run = promisify(execFile)
@@ -43,10 +44,40 @@ export async function hostFingerprint(host: string, port: number) {
   return { line: line.trim(), fingerprint: `SHA256:${createHash('sha256').update(Buffer.from(key, 'base64')).digest('base64').replace(/=+$/, '')}` }
 }
 
-/** Añade la clave de host a ~/.ssh/known_hosts solo si sigue siendo la que el usuario confirmó. */
+/** Añade la clave de host a ~/.ssh/known_hosts solo si sigue siendo la que el usuario confirmó, y la guarda en la BD. */
 export async function trustHost(host: string, port: number, fingerprint: string) {
   const now = await hostFingerprint(host, port)
   if (now.fingerprint !== fingerprint) throw new Error('La huella del servidor ha cambiado desde que la viste: no se confía')
+  await appendKnownHost(now.line)
+  await prisma.server.updateMany({ where: { host, sshPort: port }, data: { hostKey: now.line } })
+}
+
+const KNOWN_HOSTS = () => `${homedir()}/.ssh/known_hosts`
+/** «host tipo clave»: la clave en base64 identifica la línea aunque el host esté cifrado (HashKnownHosts). */
+const keyBlob = (line: string) => line.trim().split(/\s+/)[2] ?? ''
+
+async function appendKnownHost(line: string) {
   await mkdir(`${homedir()}/.ssh`, { recursive: true, mode: 0o700 })
-  await appendFile(`${homedir()}/.ssh/known_hosts`, `${now.line}\n`, { mode: 0o600 })
+  await appendFile(KNOWN_HOSTS(), `${line}\n`, { mode: 0o600 })
+}
+
+/** Línea de known_hosts que este equipo ya confía para el servidor (la ed25519 si hay varias). */
+async function knownLine(host: string, port: number) {
+  const { stdout } = await run('ssh-keygen', ['-F', hostTarget(host, port)]).catch(() => ({ stdout: '' }))
+  const lines = stdout.split('\n').map((l) => l.trim()).filter((l) => KNOWN_HOST_RE.test(l))
+  return lines.find((l) => l.split(/\s+/)[1] === 'ssh-ed25519') ?? lines[0] ?? null
+}
+
+/**
+ * La huella confirmada vive en la BD y ~/.ssh/known_hosts se repone a partir de ella: en producción el fichero se
+ * pierde con cada despliegue. Un servidor sin huella guardada toma la que este equipo ya confía.
+ */
+export async function syncKnownHosts(servers: { id: string; host: string; sshPort: number; hostKey: string | null }[]) {
+  const file = await readFile(KNOWN_HOSTS(), 'utf8').catch(() => '')
+  for (const s of servers) {
+    if (!s.hostKey) {
+      const line = await knownLine(s.host, s.sshPort)
+      if (line) await prisma.server.update({ where: { id: s.id }, data: { hostKey: line } })
+    } else if (KNOWN_HOST_RE.test(s.hostKey) && !file.includes(keyBlob(s.hostKey))) await appendKnownHost(s.hostKey)
+  }
 }

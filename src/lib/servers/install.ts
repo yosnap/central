@@ -19,8 +19,14 @@ const run = promisify(execFile)
 const KEY = `${homedir()}/.ssh/infobar_ed25519`
 const FILES = ['instalar-en-servidor.sh', 'recoger.sh', 'recoger-root.sh']
 export const ADMIN_USER_RE = /^[a-z_][a-z0-9_.-]{0,31}$/
+/** Línea de known_hosts: «host tipo clave». */
+export const KNOWN_HOST_RE = /^(\S+) (ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)) [A-Za-z0-9+/]+={0,3}$/
+export const hostTarget = (host: string, port: number) => (port === 22 ? host : `[${host}]:${port}`)
 
 export const ADMIN_KEY = `${homedir()}/.ssh/central_admin_ed25519`
+
+/** Clave pública de administración si ya existe (sin crearla): el trabajador la manda con el latido. */
+export const existingAdminPublicKey = () => readFile(`${ADMIN_KEY}.pub`, 'utf8').then((k) => k.trim(), () => null)
 
 /**
  * Clave de administrador de Central (sin frase), para servidores que solo aceptan claves: se añade una vez en el panel
@@ -45,9 +51,8 @@ async function publicKey() {
 }
 
 /** Huellas SHA256 que este Mac ya confía para el host. */
-async function knownFingerprints(host: string, port: number) {
-  const target = port === 22 ? host : `[${host}]:${port}`
-  const { stdout } = await run('ssh-keygen', ['-l', '-F', target]).catch(() => ({ stdout: '' }))
+export async function knownFingerprints(host: string, port: number) {
+  const { stdout } = await run('ssh-keygen', ['-l', '-F', hostTarget(host, port)]).catch(() => ({ stdout: '' }))
   return new Set([...stdout.matchAll(/SHA256:[A-Za-z0-9+/]+/g)].map((m) => m[0]))
 }
 

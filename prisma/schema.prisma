@@ -670,6 +670,7 @@ model Server {
   collectUser   String    @default("infobar")
   adminUser     String?   // para abrir una terminal de administración
   keyPath       String    @default("~/.ssh/infobar_ed25519") // ruta de la clave, nunca la clave
+  hostKey       String?   // línea de known_hosts confirmada (la clave pública del servidor): se repone en ~/.ssh/known_hosts
   provider      String?   // Hetzner, Contabo, Scaleway…
   panel         String?   // easypanel | dokploy | docker
   panelUrl      String?
@@ -810,7 +811,7 @@ model Deployment {
 // por ellos (solo salen conexiones del Mac), los hace y devuelve el resultado. Tipos fijos: ver src/lib/worker.ts.
 model WorkerJob {
   id         String    @id @default(cuid())
-  type       String    // assistant | scan | folders | local-status | env-file
+  type       String    // assistant | scan | folders | local-status | env-file | audit | server-install
   payload    Json
   status     String    @default("pending") // pending | running | done | error
   result     Json?
@@ -830,4 +831,5 @@ model WorkerBeat {
   hostname   String?
   version    String?
   roots      String[] // carpetas que el Mac deja escanear (CENTRAL_WORKER_ROOTS)
+  adminKey   String?  // clave pública de administración de Central en el Mac (para mostrarla en producción)
 }

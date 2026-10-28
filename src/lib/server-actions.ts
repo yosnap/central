@@ -9,6 +9,7 @@ import { linkContainer } from './servers/link'
 import { ADMIN_USER_RE, adminPublicKey, installInfobar } from './servers/install'
 import { HOST_RE, NAME_RE, trustHost } from './servers/register'
 import { requireSession } from './session'
+import { enqueue, isRemote, macOnline, pendingFor } from './worker'
 
 const opt = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null)
 const ServerForm = z.object({
@@ -128,6 +129,15 @@ export async function installServerAction(form: FormData) {
   const password = z.string().max(500).parse(form.get('password') ?? '')
   const s = await prisma.server.findUniqueOrThrow({ where: { id } })
   const privateKey = z.string().max(20000).parse(form.get('private_key') ?? '')
+  // en producción instala el Mac con sus claves; las contraseñas y claves pegadas no pasan por la cola
+  if (isRemote()) {
+    if (password || privateKey) return { error: 'Desde producción el Mac instala con sus claves: deja la contraseña y la clave vacías, o instala desde Central en el Mac.' }
+    if (!s.hostKey) return { error: 'Confirma primero la huella del servidor.' }
+    if (!(await macOnline()).online) return { error: 'El Mac no está conectado: enciende el trabajador (bun run trabajador:instalar) y vuelve a intentarlo.' }
+    if (!(await pendingFor('server-install', 'serverId', id)).length) await enqueue('server-install', { serverId: id, host: s.host, port: s.sshPort, user, hostKey: s.hostKey })
+    refresh()
+    return
+  }
   const r = await installInfobar({ host: s.host, port: s.sshPort, user, password: password || undefined, privateKey: privateKey || undefined })
   if (!r.ok) return { error: r.log.slice(-400) }
   await prisma.server.update({ where: { id }, data: { adminUser: user, pausedUntil: null, nextAt: null } })
@@ -138,5 +148,9 @@ export async function installServerAction(form: FormData) {
 /** Clave pública de administrador de Central, para pegarla en el panel del proveedor. */
 export async function adminPublicKeyAction() {
   await requireSession()
-  return adminPublicKey()
+  if (!isRemote()) return adminPublicKey()
+  // en producción, la del Mac (llega con el latido del trabajador)
+  const beat = await prisma.workerBeat.findUnique({ where: { id: 'mac' } })
+  if (!beat?.adminKey) throw new Error('El Mac aún no ha enviado su clave: actualiza el trabajador')
+  return beat.adminKey
 }

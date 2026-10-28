@@ -9,6 +9,7 @@ import { exposedPorts } from './external'
 import { assignServersByDomain, matchContainers, sortDomains } from './match'
 import { interpret } from './parse'
 import { refreshServiceVersion, versionFromImage } from '../deploy-version'
+import { syncKnownHosts } from './register'
 import { roleOf } from './role'
 import { runCollect } from './ssh'
 import type { Snapshot } from './snapshot'
@@ -174,6 +175,7 @@ export async function runServers(opts: { force?: boolean; ids?: string[] } = {})
       ...(opts.force ? {} : { AND: [{ OR: [{ nextAt: null }, { nextAt: { lte: soon } }] }, { OR: [{ pausedUntil: null }, { pausedUntil: { lte: now } }] }] }),
     },
   })
+  await syncKnownHosts(servers)
   const results: { name: string; ok: boolean; detail: string }[] = []
   for (let i = 0; i < servers.length; i += PARALLEL) {
     const batch = servers.slice(i, i + PARALLEL)
