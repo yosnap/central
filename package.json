@@ -1,6 +1,6 @@
 {
   "name": "central",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "description": "Central — CRM personal de Paulo (iServisat): clientes, proyectos, webs, presupuestos, agenda y correo.",
   "type": "module",
@@ -16,6 +16,7 @@
     "scan": "bun scripts/scan.ts",
     "uptime": "bun scripts/uptime.ts",
     "auditoria": "bun scripts/auditoria.ts",
+    "secretos:copias": "bun scripts/secretos-copias.ts",
     "servidores": "bun scripts/servidores.ts",
     "repos:sync": "bun scripts/repos-sync.ts",
     "tarea:horaria": "bun scripts/scan.ts --fetch-active && bun scripts/repos-sync.ts --active",

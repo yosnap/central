@@ -17,7 +17,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `Project` (exclusión) | 1 | `excluded`, `excludedAt`: proyecto fuera de Central. No cuenta en listados, avisos ni MCP; el escáner lo respeta |
 | `Project` (repositorio) | 1 | `repoUrl` lo lee el escáner del remoto de git; si se escribe a mano, `repoLocked` lo fija y el escáner no lo cambia. Una carpeta sin remoto ya no borra el que había |
 | `ProjectSecret` | 1 | Secreto de un proyecto por entorno (producción, pruebas, desarrollo): `key` en claro, `value` cifrado con `encryptJson`, notas. Único por proyecto, entorno y clave |
-| `EnvBackup` | 1 | Copia cifrada de un fichero de variables completo por entorno, con número de claves y origen (importación, antes de sustituir, manual) |
+| `EnvBackup` | 1 | Copia cifrada de un fichero de variables completo por entorno, con número de claves y origen (importación, antes de sustituir, manual, servidor). Solo se guarda si cambia respecto a la última |
 | `ProjectLocation` | 1 | Cada carpeta del disco de un proyecto: principal, worktree, copia o backup, con rama, último commit, ficheros sin commit (`uncommitted`) y nuevos sin versionar (`untracked`), `merged` (rama fusionada) y `missing` (worktree huérfano) |
 | `ScanRoot` | 1 | Carpetas raíz escaneadas y cuándo |
 | `Website` | 1 | Web con `kind` (cliente, propia, centralizada), último estado, código y ms |

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 — 2026-10-28
+
+- Copias de secretos del entorno desplegado (pruebas y producción) cada día, leídas de los contenedores enlazados; también desde producción con el trabajador del Mac.
+- «Copiar del servidor» guarda una versión nueva de la copia sin tocar los secretos; ninguna copia se guarda si es igual a la última.
+- `bun run secretos:copias` y tarea diaria en el Mac.
+
 ## 0.4.0 — 2026-10-28
 
 - Logo y favicon propios; la versión de Central se muestra en la navegación (sale de `package.json`).

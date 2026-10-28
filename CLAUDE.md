@@ -38,8 +38,9 @@ bun run scan [-- <carpeta>] [--csv salida.csv] [--map /local=/real]
 bun run websites:import inventario/webs.txt
 bun run uptime
 bun run servidores        # lee los servidores a los que les toca (-- --todos: todos ya)
+bun run secretos:copias   # copia del entorno desplegado (pruebas y producción) de los contenedores enlazados, solo si cambió
 bun run auditoria         # vulnerabilidades de dependencias de los proyectos en producción (requiere brew install osv-scanner)
-bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto, auditoría cada día (también tareas:quitar, tareas:estado)
+bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto, auditoría y copia de secretos cada día (también tareas:quitar, tareas:estado)
 bun run mcp
 bun run produccion:variables   # variables de producción al portapapeles para Dokploy (sin mostrarlas)
 bun run produccion:subir       # datos trabajados en el Mac a producción (sin borrar ni tocar presupuestos; -- --prueba cuenta)
