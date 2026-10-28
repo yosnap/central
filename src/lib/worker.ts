@@ -8,7 +8,7 @@ import type { Prisma } from '@/generated/prisma/client'
 import { prisma } from './prisma'
 
 /** Tipos de trabajo que el trabajador sabe hacer; ningún otro se acepta. */
-export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit', 'server-install'] as const
+export const JOB_TYPES = ['assistant', 'scan', 'folders', 'local-status', 'env-file', 'audit', 'server-install', 'container-env'] as const
 export type JobType = (typeof JOB_TYPES)[number]
 
 export const isRemote = () => process.env.CENTRAL_RUNTIME === 'production'
@@ -16,6 +16,7 @@ const ONLINE_MS = 60_000
 const STALE_MS = 15 * 60_000
 const SCAN_EVERY_MS = 60 * 60_000
 const AUDIT_EVERY_MS = 24 * 60 * 60_000
+const ENV_BACKUP_EVERY_MS = 24 * 60 * 60_000
 
 /** Las fechas viajan como texto en el JSON del trabajador: se vuelven a convertir en fechas al importar. */
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
@@ -70,6 +71,14 @@ export async function beatAndClaim(info: { hostname?: string; version?: string; 
     const { auditTargets } = await import('./audit-import')
     await enqueue('audit', { targets: (await auditTargets()).map(({ projectId, path }) => ({ projectId, path })) })
   }
+  // copia diaria del entorno desplegado (pruebas y producción) de los proyectos con contenedores enlazados
+  const lastEnv = await prisma.workerJob.findFirst({ where: { type: 'container-env', payload: { path: ['daily'], equals: true } }, orderBy: { createdAt: 'desc' }, select: { createdAt: true } })
+  if (!lastEnv || now.getTime() - lastEnv.createdAt.getTime() > ENV_BACKUP_EVERY_MS) {
+    const { deployedEnvs, envTargets } = await import('./secrets-store')
+    for (const { projectId, environment } of await deployedEnvs()) {
+      await enqueue('container-env', { projectId, environment, daily: true, targets: await envTargets(projectId, environment) })
+    }
+  }
   const pending = await prisma.workerJob.findMany({ where: { status: 'pending' }, orderBy: { createdAt: 'asc' }, take: limit })
   const claimed = []
   for (const j of pending) {
@@ -82,8 +91,11 @@ export async function beatAndClaim(info: { hostname?: string; version?: string; 
 
 type Done = { result?: unknown; error?: string }
 
-/** Qué hace Central con el resultado de cada tipo de trabajo. */
-const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) => Promise<void>>> = {
+/**
+ * Qué hace Central con el resultado de cada tipo de trabajo. Si un manejador devuelve algo, se guarda eso en lugar del
+ * resultado (p. ej. para no dejar variables de entorno en claro en la cola).
+ */
+const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) => Promise<unknown>>> = {
   assistant: async (payload, done) => {
     const { quoteId } = payload as { quoteId: string }
     const { finishAssistant } = await import('./quote-ai')
@@ -116,15 +128,30 @@ const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) 
     await prisma.server.update({ where: { id: serverId }, data: { adminUser: user, pausedUntil: null, nextAt: null } })
     await (await import('./servers/collect')).runServers({ force: true, ids: [serverId] })
   },
+  'container-env': async (payload, done) => {
+    if (done.error) return
+    const { projectId, environment } = payload as { projectId: string; environment: string }
+    const { entries, from, errors } = done.result as { entries: import('./env-file').EnvEntry[]; from: string[]; errors: string[] }
+    if (!entries.length) throw new Error(errors[0] ?? 'Los contenedores no tienen variables propias')
+    const { saveBackup } = await import('./secrets-store')
+    const saved = await saveBackup(projectId, environment, entries, 'server')
+    return { saved, count: entries.length, from, errors }
+  },
 }
 
 export async function finishJob(id: string, done: Done) {
   const job = await prisma.workerJob.findUnique({ where: { id } })
   if (!job || job.status === 'done' || job.status === 'error') return
   let error = done.error ?? null
-  try { await handlers[job.type as JobType]?.(job.payload, done) } catch (e) { error = (e as Error).message }
+  let result = done.result
+  try {
+    const kept = await handlers[job.type as JobType]?.(job.payload, done)
+    if (kept !== undefined) result = kept
+  } catch (e) { error = (e as Error).message }
+  // las variables de entorno nunca se guardan en la cola, ni siquiera si su manejador falla
+  if (job.type === 'container-env' && result === done.result) result = undefined
   await prisma.workerJob.update({
     where: { id },
-    data: { status: error ? 'error' : 'done', error, result: error ? undefined : (done.result as Prisma.InputJsonValue | undefined), finishedAt: new Date() },
+    data: { status: error ? 'error' : 'done', error, result: error ? undefined : (result as Prisma.InputJsonValue | undefined), finishedAt: new Date() },
   })
 }

@@ -11,7 +11,7 @@ DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BUN="$(command -v bun || echo "$HOME/.bun/bin/bun")"
 AGENTS="$HOME/Library/LaunchAgents"
 LOGS="$HOME/Library/Logs/Central"
-TAREAS=("com.iservisat.central.scan|tarea:horaria|3600" "com.iservisat.central.uptime|uptime|600" "com.iservisat.central.servidores|servidores|60" "com.iservisat.central.auditoria|auditoria|86400")
+TAREAS=("com.iservisat.central.scan|tarea:horaria|3600" "com.iservisat.central.uptime|uptime|600" "com.iservisat.central.servidores|servidores|60" "com.iservisat.central.auditoria|auditoria|86400" "com.iservisat.central.secretos|secretos:copias|86400")
 
 plist() { # id script intervalo
   cat <<EOF

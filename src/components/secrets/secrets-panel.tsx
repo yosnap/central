@@ -58,7 +58,9 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
     const r = await withUnlock(() => importFromServers(projectId, env)).finally(() => setPulling(false))
     if (!r) return
     if ('error' in r) toast.error(r.error)
-    else toast.success(`${r.count} variables traídas de ${r.from.join(', ')}`)
+    else if ('queued' in r) toast.success('Pedido al Mac: la copia aparecerá en unos segundos (recarga la página)')
+    else if (r.saved) toast.success(`Copia nueva con ${r.count} variables de ${r.from.join(', ')}`)
+    else toast.info('Sin cambios desde la última copia: no se guarda otra')
   }
 
   return (
@@ -80,7 +82,7 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
       <div className="flex flex-wrap gap-3">
         <Button onClick={() => { setEditing(null); setFormOpen(true) }}><Plus className="size-5" aria-hidden />Añadir secreto</Button>
         <Button variant="secondary" onClick={() => setImportOpen(true)}><FileUp className="size-5" aria-hidden />Importar .env</Button>
-        <Button variant="secondary" onClick={pullFromServer} disabled={pulling}><Server className="size-5" aria-hidden />{pulling ? 'Trayendo…' : 'Traer del servidor'}</Button>
+        <Button variant="secondary" onClick={pullFromServer} disabled={pulling}><Server className="size-5" aria-hidden />{pulling ? 'Copiando…' : 'Copiar del servidor'}</Button>
         <Button variant="secondary" onClick={exportFile} disabled={!rows.length}><Download className="size-5" aria-hidden />Descargar .env</Button>
         <ActionForm action={backupNow} success="Copia guardada">
           <input type="hidden" name="projectId" value={projectId} />

@@ -15,12 +15,13 @@ import { z } from 'zod'
 import { auditDir } from '../src/lib/audit'
 import { runAssistant } from '../src/lib/claude-cli'
 import { pathMap, scanRoots } from '../src/lib/scan-roots'
+import { readContainerEnv } from '../src/lib/servers/service-env'
 import { ADMIN_USER_RE, existingAdminPublicKey, hostTarget, installInfobar, KNOWN_HOST_RE, knownFingerprints } from '../src/lib/servers/install'
 
 const BASE = (process.env.CENTRAL_URL ?? '').replace(/\/$/, '')
 const TOKEN = process.env.CENTRAL_WORKER_TOKEN ?? ''
 const EVERY_MS = 5000
-const VERSION = '2'
+const VERSION = '3'
 // una carpeta por presupuesto: Claude Code sigue la conversación (--resume) desde la misma carpeta
 const WORK = path.join(os.homedir(), 'Library', 'Application Support', 'Central', 'quotes')
 // carpetas que el Mac deja escanear; las decide el Mac, no Central (separadas por «;»)
@@ -47,13 +48,33 @@ const Assistant = z.object({
 })
 
 const Audit = z.object({ targets: z.array(z.object({ projectId: z.string().regex(/^[\w-]{1,40}$/), path: z.string().max(1000) })).max(2000) })
+const HostKey = z.string().regex(KNOWN_HOST_RE)
 const ServerInstall = z.object({
   serverId: z.string().regex(/^[\w-]{1,40}$/),
   host: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$/),
   port: z.number().int().min(1).max(65535),
   user: z.string().regex(ADMIN_USER_RE),
-  hostKey: z.string().regex(KNOWN_HOST_RE),
+  hostKey: HostKey,
 })
+const ContainerEnv = z.object({
+  targets: z.array(z.object({
+    host: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$/),
+    sshPort: z.number().int().min(1).max(65535),
+    adminUser: z.string().regex(ADMIN_USER_RE).nullable(),
+    hostKey: HostKey.nullable(),
+    name: z.string().regex(/^[A-Za-z0-9_.-]{1,200}$/),
+    kind: z.enum(['swarm', 'container']),
+  })).min(1).max(20),
+})
+
+/** Si el Mac aún no conoce el servidor, confía en la huella que se confirmó en Central, atada a ese host y puerto. */
+async function trustConfirmedHost(host: string, port: number, hostKey: string | null) {
+  if (!hostKey || (await knownFingerprints(host, port)).size) return
+  const [, type, key] = hostKey.split(' ')
+  await fs.mkdir(path.join(os.homedir(), '.ssh'), { recursive: true, mode: 0o700 })
+  await fs.appendFile(path.join(os.homedir(), '.ssh', 'known_hosts'), `${hostTarget(host, port)} ${type} ${key}\n`, { mode: 0o600 })
+}
+
 const Scan = z.object({ fetch: z.enum(['none', 'active', 'all']), known: z.array(z.string().max(1000)).max(20_000) })
 
 const handlers: Record<string, (payload: unknown) => Promise<unknown>> = {
@@ -87,12 +108,28 @@ const handlers: Record<string, (payload: unknown) => Promise<unknown>> = {
    */
   async 'server-install'(payload) {
     const { host, port, user, hostKey } = ServerInstall.parse(payload)
-    if (!(await knownFingerprints(host, port)).size) {
-      const [, type, key] = hostKey.split(' ')
-      await fs.mkdir(path.join(os.homedir(), '.ssh'), { recursive: true, mode: 0o700 })
-      await fs.appendFile(path.join(os.homedir(), '.ssh', 'known_hosts'), `${hostTarget(host, port)} ${type} ${key}\n`, { mode: 0o600 })
-    }
+    await trustConfirmedHost(host, port, hostKey)
     return installInfobar({ host, port, user })
+  },
+
+  /**
+   * Variables del entorno desplegado de un proyecto, leídas de sus contenedores con la clave de administración del Mac
+   * (solo lectura). Central las guarda cifradas como copia; no se escriben en ningún registro.
+   */
+  async 'container-env'(payload) {
+    const { targets } = ContainerEnv.parse(payload)
+    const merged = new Map<string, string>()
+    const from: string[] = []
+    const errors: string[] = []
+    for (const t of targets) {
+      try {
+        await trustConfirmedHost(t.host, t.sshPort, t.hostKey)
+        const entries = await readContainerEnv(t, t)
+        if (entries.length) from.push(t.name)
+        for (const e of entries) if (!merged.has(e.key)) merged.set(e.key, e.value)
+      } catch (e) { errors.push((e as Error).message) }
+    }
+    return { entries: [...merged].map(([key, value]) => ({ key, value })), from, errors }
   },
 
   /** Una vuelta del asistente de presupuestos: baja los documentos nuevos a su carpeta y ejecuta Claude Code. */

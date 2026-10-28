@@ -9,7 +9,8 @@ import { ENV_KEY, formatEnv, parseEnv, type EnvEntry } from './env-file'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { lock, unlockWithPassword, unlockedUntil } from './unlock'
-import { readContainerEnv } from './servers/service-env'
+import { envTargets, pullServerEnv, saveBackup, type BackupSource } from './secrets-store'
+import { enqueue, isRemote, macOnline, pendingFor } from './worker'
 
 // Ninguna acción registra ni devuelve valores salvo las que exigen el desbloqueo.
 
@@ -29,12 +30,7 @@ async function currentEntries(projectId: string, environment: string): Promise<E
   return rows.map((r) => ({ key: r.key, value: decrypt(r.value) }))
 }
 
-async function backup(projectId: string, environment: string, entries: EnvEntry[], source: 'import' | 'restore' | 'manual' | 'server', content?: string) {
-  if (!entries.length) return
-  await prisma.envBackup.create({
-    data: { projectId, environment, content: encryptJson(content ?? formatEnv(entries)), keyCount: entries.length, source },
-  })
-}
+const backup = (projectId: string, environment: string, entries: EnvEntry[], source: BackupSource, content?: string) => saveBackup(projectId, environment, entries, source, content)
 
 /** Sustituye todos los secretos de un entorno por `entries`. */
 async function replaceAll(projectId: string, environment: string, entries: EnvEntry[]) {
@@ -127,33 +123,26 @@ export async function importLocalEnvFile(form: FormData) {
 }
 
 /**
- * Trae las variables de los contenedores enlazados a los servicios del entorno (las aplicaciones primero: en un choque
- * de nombre gana su valor). Se suman a las que ya hay; deja copia con origen «Servidor».
+ * Lee el entorno desplegado en los contenedores enlazados a los servicios del entorno y guarda una versión nueva de la
+ * copia (origen «Servidor») solo si ha cambiado. No toca los secretos guardados: para usarlos, se restaura la copia.
+ * En producción lo hace el trabajador del Mac (la clave de administración vive en el Mac).
  */
-export async function importFromServers(projectId: string, environment: string): Promise<Locked | { error: string } | { count: number; from: string[] }> {
+export async function importFromServers(projectId: string, environment: string): Promise<Locked | { error: string } | { queued: true } | { saved: boolean; count: number; from: string[] }> {
   if (!(await requireUnlocked())) return LOCKED
   const env = Env.parse(environment)
-  const containers = await prisma.serverContainer.findMany({
-    where: { projectService: { projectId, environment: env } },
-    select: { name: true, kind: true, role: true, server: { select: { host: true, sshPort: true, adminUser: true } } },
-  })
-  if (!containers.length) return { error: 'Este entorno no tiene contenedores de un servidor enlazados' }
-  const isApp = (r: string | null) => !r || r === 'app' || r === 'other'
-  containers.sort((a, b) => Number(isApp(b.role)) - Number(isApp(a.role)))
-  const merged = new Map<string, string>()
-  const from: string[] = []
-  for (const c of containers) {
-    let entries: EnvEntry[]
-    try { entries = await readContainerEnv(c.server, c) } catch (e) { return { error: (e as Error).message } }
-    if (entries.length) from.push(c.name)
-    for (const e of entries) if (!merged.has(e.key)) merged.set(e.key, e.value)
+  if (isRemote()) {
+    const targets = await envTargets(projectId, env)
+    if (!targets.length) return { error: 'Este entorno no tiene contenedores de un servidor enlazados' }
+    if (!(await macOnline()).online) return { error: 'El Mac no está conectado: enciende el trabajador (bun run trabajador:instalar) y vuelve a intentarlo.' }
+    const waiting = (await pendingFor('container-env', 'projectId', projectId)).some((j) => (j.payload as { environment?: string }).environment === env)
+    if (!waiting) await enqueue('container-env', { projectId, environment: env, targets })
+    return { queued: true }
   }
-  const entries = [...merged].map(([key, value]) => ({ key, value }))
-  if (!entries.length) return { error: 'Los contenedores no tienen variables propias' }
-  await saveEntries(projectId, env, entries)
-  await backup(projectId, env, entries, 'server')
-  refresh(projectId)
-  return { count: entries.length, from }
+  try {
+    const r = await pullServerEnv(projectId, env)
+    refresh(projectId)
+    return r
+  } catch (e) { return { error: (e as Error).message } }
 }
 
 async function saveEntries(projectId: string, environment: string, entries: EnvEntry[]) {
@@ -182,7 +171,7 @@ export async function backupNow(form: FormData) {
   const { projectId, environment } = z.object({ projectId: z.string(), environment: Env }).parse(Object.fromEntries(form))
   const entries = await currentEntries(projectId, environment)
   if (!entries.length) throw new Error('No hay secretos en este entorno')
-  await backup(projectId, environment, entries, 'manual')
+  if (!(await backup(projectId, environment, entries, 'manual'))) throw new Error('No hay cambios desde la última copia')
   refresh(projectId)
 }
 
