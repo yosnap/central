@@ -8,11 +8,12 @@ import { requireSession } from './session'
 /** Actualiza los monitores de Uptime Kuma sin esperar ni romper la acción si no está configurado. */
 const kumaInBackground = () => import('./kuma').then((k) => k.syncKuma()).catch(() => {})
 
-const TYPES = ['WEB_SITE', 'WEB_APP', 'ECOMMERCE', 'API', 'ADDON', 'PLUGIN', 'MOBILE_APP', 'DESKTOP_APP', 'BROWSER_EXTENSION', 'LIBRARY', 'AUTOMATION', 'CONTENT'] as const
+const TYPES = ['WEB_SITE', 'WEB_APP', 'ECOMMERCE', 'API', 'ADDON', 'PLUGIN', 'MOBILE_APP', 'DESKTOP_APP', 'BROWSER_EXTENSION', 'LIBRARY', 'SKILL', 'AUTOMATION', 'CONTENT'] as const
 const PLATFORMS = ['WORDPRESS', 'WOOCOMMERCE', 'PRESTASHOP', 'SHOPIFY', 'N8N', 'CHROME', 'ELEMENTOR', 'OTHER'] as const
 
 const Classification = z.object({
   id: z.string(),
+  name: z.string().trim().min(1).max(120),
   kind: z.enum(['CLIENT', 'OWN', 'TRAINING', 'EXPERIMENT']),
   status: z.enum(['ACTIVE', 'MAINTENANCE', 'DORMANT', 'ARCHIVED']),
   statusLocked: z.coerce.boolean().optional(),
@@ -32,7 +33,7 @@ export async function saveClassification(form: FormData) {
   await prisma.project.update({
     where: { id: d.id },
     data: {
-      kind: d.kind, status: d.status, statusLocked: !!d.statusLocked, phase: d.phase?.trim() || null,
+      name: d.name, kind: d.kind, status: d.status, statusLocked: !!d.statusLocked, phase: d.phase?.trim() || null,
       description: d.description?.trim() || null, clientId: client?.id ?? null, reviewedAt: new Date(),
       type: d.type || null, platform: d.platform || null,
       // un proyecto no puede pertenecer a sí mismo

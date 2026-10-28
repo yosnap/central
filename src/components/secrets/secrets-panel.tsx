@@ -1,8 +1,8 @@
 'use client'
 
-import { Copy, Download, Eye, EyeOff, FileUp, Pencil, Plus, Save } from 'lucide-react'
+import { Copy, Download, Eye, EyeOff, FileUp, Pencil, Plus, Save, Server } from 'lucide-react'
 import { useState } from 'react'
-import { backupNow, deleteSecret, exportEnv, revealSecret } from '@/lib/secret-actions'
+import { backupNow, deleteSecret, exportEnv, importFromServers, revealSecret } from '@/lib/secret-actions'
 import { ENVIRONMENTS, envLabel } from '@/lib/environments'
 import { ActionForm, Button, ConfirmAction, Empty, SubmitButton, Table, Tooltip, cn, toast } from '@/components/ui'
 import { BackupsList } from './backups-list'
@@ -52,6 +52,15 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
     if (r) downloadText(`${fileBase}.${env}.env`, r.content)
   }
 
+  const [pulling, setPulling] = useState(false)
+  const pullFromServer = async () => {
+    setPulling(true)
+    const r = await withUnlock(() => importFromServers(projectId, env)).finally(() => setPulling(false))
+    if (!r) return
+    if ('error' in r) toast.error(r.error)
+    else toast.success(`${r.count} variables traídas de ${r.from.join(', ')}`)
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -71,6 +80,7 @@ function Panel({ projectId, fileBase, secrets, backups, revealed, setRevealed }:
       <div className="flex flex-wrap gap-3">
         <Button onClick={() => { setEditing(null); setFormOpen(true) }}><Plus className="size-5" aria-hidden />Añadir secreto</Button>
         <Button variant="secondary" onClick={() => setImportOpen(true)}><FileUp className="size-5" aria-hidden />Importar .env</Button>
+        <Button variant="secondary" onClick={pullFromServer} disabled={pulling}><Server className="size-5" aria-hidden />{pulling ? 'Trayendo…' : 'Traer del servidor'}</Button>
         <Button variant="secondary" onClick={exportFile} disabled={!rows.length}><Download className="size-5" aria-hidden />Descargar .env</Button>
         <ActionForm action={backupNow} success="Copia guardada">
           <input type="hidden" name="projectId" value={projectId} />

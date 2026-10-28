@@ -106,7 +106,7 @@ export function RepoCard({ p, remotes }: { p: Project; remotes: RepoRemote[] }) 
                   {b.behind}
                   {/* otra rama que solo va por detrás: no hay trabajo perdido, solo está sin poner al día */}
                   {b.behind > 0 && !b.ahead && b.name !== p.defaultBranch && b.upstream && !b.gone && (
-                    <div className="font-sans text-sm font-normal text-muted">Solo atrasada: <code className="font-mono">git fetch {b.upstream.split('/')[0]} {b.upstream.slice(b.upstream.indexOf('/') + 1)}:{b.name}</code></div>
+                    <div className="font-sans text-sm font-normal text-muted">Tu copia local de esta rama está desactualizada; no tienes nada pendiente en ella. Se pone al día con <code className="font-mono">git fetch {b.upstream.split('/')[0]} {b.upstream.slice(b.upstream.indexOf('/') + 1)}:{b.name}</code></div>
                   )}
                 </td>
               </tr>

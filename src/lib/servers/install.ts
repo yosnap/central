@@ -20,7 +20,7 @@ const KEY = `${homedir()}/.ssh/infobar_ed25519`
 const FILES = ['instalar-en-servidor.sh', 'recoger.sh', 'recoger-root.sh']
 export const ADMIN_USER_RE = /^[a-z_][a-z0-9_.-]{0,31}$/
 
-const ADMIN_KEY = `${homedir()}/.ssh/central_admin_ed25519`
+export const ADMIN_KEY = `${homedir()}/.ssh/central_admin_ed25519`
 
 /**
  * Clave de administrador de Central (sin frase), para servidores que solo aceptan claves: se añade una vez en el panel
@@ -161,7 +161,7 @@ export async function installInfobar({ host, port, user, password, privateKey }:
       const methods = await acceptedMethods(host, port, user)
       if (methods && !methods.includes('password') && !methods.includes('keyboard-interactive')) return { ok: false, log: `Este servidor no deja entrar a ${user} con contraseña, solo con clave. Añade la clave de Central (en esta misma ventana) en el panel de tu proveedor y vuelve a pulsar «Instalar» sin contraseña.` }
     }
-    return { ok: false, log: /authentication/i.test(m) ? (password ? `No entra como ${user}: ni con las claves de este Mac (${creds.keys.length}) ni con la contraseña` : `No entra como ${user} con ninguna de las ${creds.keys.length} claves de este Mac${creds.agent ? ' ni con el agente SSH' : ''}: escribe la contraseña`) : /verification/i.test(m) ? 'La huella del servidor no coincide con la confirmada' : `No se pudo conectar: ${m}` }
+    return { ok: false, log: /authentication/i.test(m) ? (password ? `No entra como ${user}: ni con las claves de este Mac (${creds.keys.length}) ni con la contraseña` : `No entra como ${user} con ninguna de las ${creds.keys.length} claves de este Mac${creds.agent ? ' ni con el agente SSH' : ''}. Leer el servidor usa infobar, pero instalar o actualizar necesita ${user}: escribe su contraseña o añade la clave de Central (en esta misma ventana) en el panel de tu proveedor y vuelve a pulsar «Instalar». Solo hace falta una vez.`) : /verification/i.test(m) ? 'La huella del servidor no coincide con la confirmada' : `No se pudo conectar: ${m}` }
   }
 
   }

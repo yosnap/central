@@ -9,6 +9,7 @@ import { ENV_KEY, formatEnv, parseEnv, type EnvEntry } from './env-file'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { lock, unlockWithPassword, unlockedUntil } from './unlock'
+import { readContainerEnv } from './servers/service-env'
 
 // Ninguna acción registra ni devuelve valores salvo las que exigen el desbloqueo.
 
@@ -28,7 +29,7 @@ async function currentEntries(projectId: string, environment: string): Promise<E
   return rows.map((r) => ({ key: r.key, value: decrypt(r.value) }))
 }
 
-async function backup(projectId: string, environment: string, entries: EnvEntry[], source: 'import' | 'restore' | 'manual', content?: string) {
+async function backup(projectId: string, environment: string, entries: EnvEntry[], source: 'import' | 'restore' | 'manual' | 'server', content?: string) {
   if (!entries.length) return
   await prisma.envBackup.create({
     data: { projectId, environment, content: encryptJson(content ?? formatEnv(entries)), keyCount: entries.length, source },
@@ -125,21 +126,53 @@ export async function importLocalEnvFile(form: FormData) {
   await importContent({ projectId, environment, content, replace: false })
 }
 
+/**
+ * Trae las variables de los contenedores enlazados a los servicios del entorno (las aplicaciones primero: en un choque
+ * de nombre gana su valor). Se suman a las que ya hay; deja copia con origen «Servidor».
+ */
+export async function importFromServers(projectId: string, environment: string): Promise<Locked | { error: string } | { count: number; from: string[] }> {
+  if (!(await requireUnlocked())) return LOCKED
+  const env = Env.parse(environment)
+  const containers = await prisma.serverContainer.findMany({
+    where: { projectService: { projectId, environment: env } },
+    select: { name: true, kind: true, role: true, server: { select: { host: true, sshPort: true, adminUser: true } } },
+  })
+  if (!containers.length) return { error: 'Este entorno no tiene contenedores de un servidor enlazados' }
+  const isApp = (r: string | null) => !r || r === 'app' || r === 'other'
+  containers.sort((a, b) => Number(isApp(b.role)) - Number(isApp(a.role)))
+  const merged = new Map<string, string>()
+  const from: string[] = []
+  for (const c of containers) {
+    let entries: EnvEntry[]
+    try { entries = await readContainerEnv(c.server, c) } catch (e) { return { error: (e as Error).message } }
+    if (entries.length) from.push(c.name)
+    for (const e of entries) if (!merged.has(e.key)) merged.set(e.key, e.value)
+  }
+  const entries = [...merged].map(([key, value]) => ({ key, value }))
+  if (!entries.length) return { error: 'Los contenedores no tienen variables propias' }
+  await saveEntries(projectId, env, entries)
+  await backup(projectId, env, entries, 'server')
+  refresh(projectId)
+  return { count: entries.length, from }
+}
+
+async function saveEntries(projectId: string, environment: string, entries: EnvEntry[]) {
+  for (const e of entries) {
+    await prisma.projectSecret.upsert({
+      where: { projectId_environment_key: { projectId, environment, key: e.key } },
+      update: { value: encryptJson(e.value) },
+      create: { projectId, environment, key: e.key, value: encryptJson(e.value) },
+    })
+  }
+}
+
 async function importContent(d: z.infer<typeof ImportForm>) {
   const entries = parseEnv(d.content)
   if (!entries.length) throw new Error('El fichero no tiene variables')
   if (d.replace) {
     await backup(d.projectId, d.environment, await currentEntries(d.projectId, d.environment), 'restore')
     await replaceAll(d.projectId, d.environment, entries)
-  } else {
-    for (const e of entries) {
-      await prisma.projectSecret.upsert({
-        where: { projectId_environment_key: { projectId: d.projectId, environment: d.environment, key: e.key } },
-        update: { value: encryptJson(e.value) },
-        create: { projectId: d.projectId, environment: d.environment, key: e.key, value: encryptJson(e.value) },
-      })
-    }
-  }
+  } else await saveEntries(d.projectId, d.environment, entries)
   await backup(d.projectId, d.environment, entries, 'import', d.content)
   refresh(d.projectId)
 }

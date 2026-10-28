@@ -9,7 +9,9 @@ import { RepoCard } from '@/components/project/repo-card'
 import { SuggestedDomains } from '@/components/project/suggested-domains'
 import { InheritedServicesCard, PartsCard } from '@/components/project/system-cards'
 import { InstallationsCard } from '@/components/project/installations-card'
-import { DEPLOY_LABEL, projectIssues } from '@/lib/completeness'
+import { ALERT_WHERE, DEPLOY_LABEL, TOOL_TYPES, projectIssues } from '@/lib/completeness'
+import { SecurityCard } from '@/components/project/security-card'
+import { AUDIT_WHERE } from '@/lib/audit-import'
 import { ArrowLeft } from 'lucide-react'
 import { BrandLogo } from '@/components/brand-logo'
 import { DeploymentsCard } from '@/components/deployments-card'
@@ -37,7 +39,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       services: { orderBy: [{ environment: 'asc' }, { position: 'asc' }], include: { website: true, containers: { select: { name: true, state: true, detail: true } } } },
       videos: { orderBy: [{ publishedAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }], include: { channel: { select: { name: true, provider: true } } } },
       videoChannels: { include: { channel: { select: { name: true, provider: true } } } },
-      _count: { select: { services: true } },
+      _count: { select: { services: true, advisories: { where: ALERT_WHERE } } },
+      advisories: { where: { resolvedAt: null }, orderBy: [{ ignoredAt: { sort: 'desc', nulls: 'first' } }, { severity: 'asc' }, { package: 'asc' }] },
       parent: { select: { id: true, name: true, services: { orderBy: [{ environment: 'asc' }, { position: 'asc' }], select: { id: true, name: true, environment: true, url: true, website: { select: { lastStatus: true } } } } } },
       parts: { where: { excluded: false }, select: { id: true, name: true, type: true, status: true, version: true }, orderBy: { name: 'asc' } },
       remotes: { orderBy: { name: 'asc' } },
@@ -45,6 +48,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     },
   })
   if (!p) notFound()
+  const audited = !!(await prisma.project.count({ where: { id: p.id, ...AUDIT_WHERE } }))
   const issues = projectIssues(p)
   const [clients, systems, websites, servers] = await Promise.all([clientsP, systemsP, websitesP, serversP])
   // tus servidores primero; después las plataformas; y cualquier otro se escribe a mano
@@ -115,7 +119,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <InheritedServicesCard parent={p.parent} />
         ) : p.type === 'PLUGIN' ? (
           <InstallationsCard projectId={p.id} version={p.version} installations={p.installations} websites={websites} />
-        ) : (
+        ) : p.type && TOOL_TYPES.includes(p.type) ? null : (
         <Card title="Despliegue" note="Estado, hosting y versión en producción. La versión se rellena sola desde el servicio de producción." className="xl:col-span-3">
           {/* Fuera del formulario de despliegue: cada dominio es su propio formulario */}
           <div className="mb-6 empty:hidden"><SuggestedDomains projectId={p.id} domains={p.suggestedDomains} existingUrls={p.services.map((s) => s.url ?? '')} /></div>
@@ -151,6 +155,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
         <DeploymentsCard projectId={p.id} className="xl:col-span-3" />
 
+        {audited && <SecurityCard projectId={p.id} projectName={p.name} auditedAt={p.auditedAt} auditError={p.auditError} advisories={p.advisories} />}
+
         <PartsCard parts={p.parts} />
 
         <RepoCard p={p} remotes={p.remotes} />
@@ -158,6 +164,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <Card title="Clasificación" note="Si fijas el estado, el escáner no lo cambiará.">
           <ActionForm action={saveClassification} success="Clasificación guardada" className="flex flex-col gap-5">
             <input type="hidden" name="id" value={p.id} />
+            <Field label="Nombre" htmlFor="name" hint="El escáner no lo cambia."><Input id="name" name="name" defaultValue={p.name} required maxLength={120} /></Field>
             <Field label="Qué es" htmlFor="type"><Select id="type" name="type" defaultValue={p.type ?? ''} placeholder="Sin indicar" options={[{ value: '', label: 'Sin indicar' }, ...toOptions(TYPE_LABEL)]} /></Field>
             <Field label="Plataforma" htmlFor="platform" hint="Para plugins, temas y extensiones."><Select id="platform" name="platform" defaultValue={p.platform ?? ''} options={[{ value: '', label: 'Ninguna' }, ...toOptions(PLATFORM_LABEL)]} /></Field>
             <Field label="Sistema al que pertenece" htmlFor="parentId" hint="Para addons y módulos de otro proyecto."><Combobox id="parentId" name="parentId" defaultValue={p.parentId ?? ''} placeholder="Ninguno" searchPlaceholder="Buscar proyecto…" options={systems.map((x) => ({ value: x.id, label: x.name, hint: x.client?.name }))} /></Field>

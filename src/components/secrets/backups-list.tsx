@@ -8,7 +8,7 @@ import { downloadText } from './download'
 import type { BackupRow } from './types'
 import { useUnlock } from './unlock-provider'
 
-const SOURCE = { import: 'Importación', restore: 'Antes de sustituir', manual: 'Copia manual' } as Record<string, string>
+const SOURCE = { import: 'Importación', restore: 'Antes de sustituir', manual: 'Copia manual', server: 'Servidor' } as Record<string, string>
 
 export function BackupsList({ backups, fileBase }: { backups: BackupRow[]; fileBase: string }) {
   const { withUnlock } = useUnlock()
