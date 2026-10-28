@@ -59,11 +59,15 @@ Tres piezas:
 
 ### Reutilizar lo de CostGuard
 
-Se usan **los mismos scripts remotos** de infobar, copiados en `remote/` (`alta-servidor.sh`, `instalar-en-servidor.sh`, `recoger.sh` versión 3, `recoger-root.sh` versión 2, `cerrar-puerto-docker.sh`, `desinstalar-del-servidor.sh`) y el mismo usuario `infobar`. Un servidor ya instalado para CostGuard no hay que reinstalarlo: Central usa la clave `~/.ssh/infobar_ed25519` del Mac y el `known_hosts` normal.
+Se usan **los mismos scripts remotos** de infobar, copiados en `remote/` (`alta-servidor.sh`, `instalar-en-servidor.sh`, `recoger.sh` versión 3, `recoger-root.sh` versión 2, `cerrar-puerto-docker.sh`, `desinstalar-del-servidor.sh`) y el mismo usuario `infobar`. `bastionar-servidor.sh` es propio de Central: deja de una vez la protección básica (claves de root, sshd sin contraseñas, fail2ban, ufw con las redes de docker, sudo de cloud-init apartado y los puertos de docker que se le pasen cerrados); el modo de lanzarlo desde el Mac está en su cabecera. Un servidor ya instalado para CostGuard no hay que reinstalarlo: Central usa la clave `~/.ssh/infobar_ed25519` del Mac y el `known_hosts` normal.
 
 Decidido (opción A): Central implementa en TypeScript el lado del Mac (`src/lib/servers/`: `ssh.ts`, `parse.ts`, `status.ts`, `external.ts`, `collect.ts`, `match.ts`, `register.ts`) con las mismas reglas y umbrales; la especificación de referencia está en `plans/reports/scout-261026-1303-referencia-costguard-servidores.md`. `alta-servidor.sh` registra en Central (`bun scripts/servidores.ts registrar`), no en CostGuard.
 
 Alta: en **Servidores › Dar de alta** (nombre, host, puerto, proveedor, panel). Central lo lee al momento; si la clave del servidor no es de confianza, la ficha muestra la huella para confirmarla, y si `infobar` no está instalado, el comando `remote/alta-servidor.sh` que hay que lanzar en la terminal.
+
+La huella confirmada se guarda en la BD (`Server.hostKey`, la línea de `known_hosts`) y Central la repone en `~/.ssh/known_hosts` antes de cada lectura (`syncKnownHosts` en `register.ts`): en producción el fichero se pierde con cada despliegue. Un servidor sin huella guardada toma la que el equipo ya confía.
+
+**Desde producción** el alta y la huella funcionan igual. «Instalar» no entra desde el contenedor: encola un trabajo `server-install` y el trabajador del Mac instala con las claves del Mac (o la contraseña de su Llavero); las contraseñas y las claves pegadas no pasan por la cola, así que para un servidor que solo acepta contraseña escrita se instala desde Central en el Mac. La ficha muestra si la instalación está pedida, en curso o ha fallado, y la clave de administración que enseña es la del Mac (llega con el latido).
 
 Nunca se copian claves privadas al repo ni a la BD: Central guarda la **ruta** de la clave, no la clave.
 

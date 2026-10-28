@@ -12,6 +12,8 @@ Monousuario. No es un SaaS (para eso existe CRMDev; no mezclar).
 - No usar emoticonos en la interfaz; iconos SVG o librería si hacen falta.
 - Antes de un cambio grande, plan corto en `plans/` y luego código.
 - Mantén `docs/` al día cuando cambie el modelo de datos, un flujo o una decisión.
+- Versión: la de `package.json` es la que se ve en la navegación. Cada vez que se publique, súbela (semver) y añade su entrada en `CHANGELOG.md`.
+- Marca: logo en `src/components/logo.tsx` y favicon en `src/app/icon.svg` (mismo dibujo; `apple-icon.png` se genera de él con sharp).
 
 ## Stack
 
@@ -40,6 +42,7 @@ bun run auditoria         # vulnerabilidades de dependencias de los proyectos en
 bun run tareas:instalar   # launchd: escaneo cada hora, uptime cada 10 min, servidores cada minuto, auditoría cada día (también tareas:quitar, tareas:estado)
 bun run mcp
 bun run produccion:variables   # variables de producción al portapapeles para Dokploy (sin mostrarlas)
+bun run produccion:subir       # datos trabajados en el Mac a producción (sin borrar ni tocar presupuestos; -- --prueba cuenta)
 bun run trabajador:instalar    # trabajador del Mac en launchd (con Central en producción; también :quitar y :estado)
 ```
 

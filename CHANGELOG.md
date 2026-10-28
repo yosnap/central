@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0 — 2026-10-28
+
+- Logo y favicon propios; la versión de Central se muestra en la navegación (sale de `package.json`).
+- Qué es cada proyecto: tipo, sistema al que pertenece y plataforma propuestos por el escáner, también en monorepos; dominios sugeridos e instalaciones de plugins. Nuevo tipo «Skill de agente».
+- Repositorio local frente a origin: remotos de GitHub, GitLab y Gitea, ramas por delante o por detrás, ramas solo locales, CI, PRs e issues; aviso de proyectos sin remoto.
+- Servidores por SSH (modelo infobar): estado, protección con 13 comprobaciones, servicios Docker enlazados con los servicios de cada proyecto, puertos medidos desde fuera y API para CostGuard.
+- Uptime Kuma: monitores creados desde las webs vigiladas, métricas en Webs y en la ficha, y monitores push de dependencias y parches de seguridad.
+- Auditoría diaria de dependencias (osv-scanner y endoflife.date), tarjeta Seguridad en la ficha y exportación de los avisos como issue en Markdown.
+- Centro de alertas: campana en la navegación y página Alertas.
+- Secretos por entorno cifrados, con copias y «Traer del servidor» desde los contenedores enlazados.
+- Presupuestos por fases o paquetes con PDF y Word, y asistente con Claude Code del Mac.
+- Google Calendar y Gmail en solo lectura, ligados a clientes y proyectos.
+- Producción en Dokploy (central.sn4p.dev) con el trabajador del Mac en launchd.
+- Nombre del proyecto editable en Clasificación.
+- Servidores desde producción: la huella confirmada se guarda en la BD y «Instalar» lo hace el trabajador del Mac con sus claves.
+- `bun run produccion:subir`: lleva a producción clientes, proyectos, webs y servidores trabajados en el Mac, sin borrar ni tocar presupuestos.
+
 ## 0.3.1 — 2026-10-25
 
 - Bun como runtime y gestor de paquetes: scripts con `bun`, CLIs con `bunx`, Next.js con `bun --bun`, Dockerfile sobre `oven/bun`; se retira tsx.
