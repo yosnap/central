@@ -162,8 +162,8 @@ Despliegue del MCP: hoy stdio en el Mac; después HTTP con token para usarlo com
 
 ## 10. Local y producción
 
-- **Fase actual: local.** Postgres en Docker y Central en el Mac, con acceso directo a las carpetas y a git.
-- **Después: producción en un dominio** (Easypanel · Hetzner). El Mac **empuja** los datos con `bun run sync` y un token; no hace falta abrir un túnel. El escáner y la limpieza siguen corriendo en el Mac; las integraciones en la nube (uptime, Search Console, GA4, GitHub/GitLab) corren en el servidor.
+- **Local**: Postgres en Docker y Central en el Mac, con acceso directo a las carpetas y a git.
+- **Producción** (hecho): Central en Dokploy, en el servidor Sn4p.dev (`central.sn4p.dev`). El trabajador del Mac hace lo que solo puede hacer el Mac (escaneo, `git fetch`, asistente, lecturas con la clave de administración) con conexiones de salida y una cola; no hace falta abrir un túnel. Las integraciones en la nube (uptime, servidores, GitHub/GitLab) corren en el servidor. Ver `docs/ARQUITECTURA.md`.
 
 ---
 

@@ -22,7 +22,7 @@ Tres piezas:
 ### Dónde se instala
 
 - **Fuera de los servidores que vigila**: si Uptime Kuma vive en el mismo VPS que las webs y ese VPS cae, no avisa. Opciones: un VPS pequeño aparte (otro proveedor o al menos otra máquina) o el Mac en local durante la fase 1 (solo vigila mientras el Mac está encendido).
-- Despliegue con la imagen oficial `louislam/uptime-kuma:2` en Easypanel, con su volumen de datos y un dominio tipo `status.iservisat…`.
+- En producción corre con la imagen oficial `louislam/uptime-kuma:2` como servicio `kuma` del compose de Central en Dokploy (sin puertos publicados); en local, en el `docker-compose.yml` del Mac.
 
 ### Avisos
 

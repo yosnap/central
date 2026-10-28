@@ -7,7 +7,7 @@ CRMDev es un SaaS multi-tenant con Stripe. Central es monousuario y personal; se
 Screpy limita proyectos por plan. Un `fetch` periódico cubre disponibilidad y tiempo de respuesta sin límite. Screpy queda para SEO.
 
 ## 2026-10-25 · Escáner como CLI en el Mac
-Las carpetas están en el disco local del Mac. El servidor en Hetzner no las ve; el CLI escribe en la BD que indique `DATABASE_URL`.
+Las carpetas están en el disco local del Mac. El servidor de producción (Dokploy, Sn4p.dev) no las ve: con Central en el Mac el CLI escribe en la BD que indique `DATABASE_URL`, y con Central en producción el escaneo lo hace el trabajador del Mac.
 
 ## 2026-10-25 · Sesión monousuario con cookie firmada
 Sin proveedor de auth: contraseña en entorno + HMAC. Si se necesita 2FA o más usuarios, migrar a Better Auth.

@@ -1,46 +1,54 @@
 # Central
 
-CRM personal de Paulo (iServisat): clientes, proyectos, webs, presupuestos, agenda y correo, con servidor MCP propio.
+Central es el CRM personal de Paulo (iServisat): un único sitio para todo lo que hoy está repartido entre carpetas,
+servidores, paneles y correo. Reúne los proyectos de código, los clientes, las webs y los servidores donde se
+despliegan, los presupuestos, la agenda y las notas, y lo expone por MCP para que Claude y otras apps lo consulten.
 
-## Fase 1 (esta versión)
+Es monousuario y no es un SaaS.
 
-- **Proyectos**: inventario automático de tus carpetas (versión, framework, stack, git, cambios sin commit). Agrupa worktrees, copias y backups bajo un único proyecto y lo clasifica como cliente, propio, formación o experimento; estado según actividad (activo ≤30 días, mantenimiento ≤6 meses, parado, archivo).
-- **Webs**: de clientes, propias y centralizadas, con comprobador de uptime propio (sin límite de plan).
-- **Clientes**, **notas** y **servidor MCP** (`list_projects`, `get_project`, `list_websites`, `list_clients`, `add_note`).
-- Esquema ya preparado para **presupuestos con fases**, **tarifas**, **datos de marca/logo**, **cuentas de correo** y **mensajes guardados** (fases 2 y 3).
+## Qué hace
+
+- **Proyectos**: inventario automático de las carpetas del Mac (versión, framework, stack, git, worktrees, copias),
+  qué es cada proyecto, su estado frente a origin (GitHub, GitLab, Gitea), sus entornos (local, pruebas, producción)
+  con sus servicios y dominios, despliegues detectados y versión publicada.
+- **Secretos**: variables de cada entorno cifradas, con copias versionadas, también leídas del entorno desplegado.
+- **Seguridad**: auditoría diaria de dependencias (osv-scanner y endoflife.date) con avisos y exportación como issue.
+- **Webs**: de clientes, propias y servicios centralizados, vigiladas con Uptime Kuma y un comprobador propio.
+- **Servidores**: estado y protección de cada VPS por SSH de solo lectura (modelo infobar), servicios Docker
+  enlazados con los proyectos y puertos medidos desde fuera.
+- **Clientes, presupuestos y agenda**: presupuestos por fases con PDF y Word y un asistente con Claude Code,
+  Google Calendar y Gmail en solo lectura ligados a clientes y proyectos.
+- **Alertas y pendientes**: un único sitio que decide qué necesita atención.
+- **MCP**: servidor stdio para consultar y anotar Central desde Claude Desktop, Claude Code y otras apps.
+
+## Cómo funciona
+
+- **Producción**: Central corre en Dokploy, en el servidor Sn4p.dev, en `central.sn4p.dev` (web, tareas
+  programadas, PostgreSQL y Uptime Kuma en un mismo compose).
+- **Trabajador del Mac**: lo que solo puede hacer el Mac (escanear carpetas, `git fetch`, el asistente con Claude
+  Code, leer servidores con la clave de administración) se pide por una cola; el Mac solo hace conexiones de salida.
+- **En local**: el mismo Central puede correr en el Mac, con acceso directo a las carpetas.
+
+Detalle en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
+
+## Stack
+
+Bun, Next.js 16 (App Router, Server Components, Server Actions), TypeScript estricto, Zod, Prisma 7 con
+PostgreSQL, Tailwind CSS 4 y el SDK de MCP. Docker en local y en producción.
 
 ## Arranque local
 
 ```bash
-cp .env.example .env          # y rellena las contraseñas
-docker compose up -d          # Postgres en localhost:5433
-bun install
-bunx prisma db push            # crea las tablas
+cp .env.example .env          # y rellena los valores
+docker compose up -d          # PostgreSQL, SeaweedFS y Uptime Kuma
+bun install                   # genera el cliente de Prisma
+bunx prisma migrate deploy    # crea las tablas
 bun run scan                  # importa las carpetas de SCAN_ROOTS
 bun run dev                   # http://localhost:3099
 ```
 
-## Añadir más carpetas
-
-```bash
-bun run scan "/ruta/a/otra/carpeta"          # la importa y la recuerda
-bun run scan "/ruta" --csv inventario/revision.csv   # solo genera el inventario para revisarlo
-```
-
-Volver a escanear actualiza versión, git y estado. Lo que edites a mano (tipo, cliente, fase, descripción) se respeta, y el estado también si marcas "Fijar estado".
-
-## Webs
-
-Fichero de texto, una por línea: `dominio ; cliente|propia|central ; Cliente ; Etiqueta`
-
-```bash
-bun run websites:import inventario/webs.txt
-bun run uptime                                  # comprobación manual
-bun run tareas:instalar                         # tareas del Mac: escaneo cada hora y uptime cada 10 min
-bun run tareas:quitar | tareas:estado
-```
-
-En producción, programa `GET /api/cron/uptime?token=$CRON_TOKEN` cada 5–15 minutos (cron de Easypanel o n8n).
+Los demás comandos (servidores, uptime, auditoría, copias de secretos, tareas de launchd, trabajador del Mac,
+variables y datos de producción) están en [CLAUDE.md](CLAUDE.md).
 
 ## MCP
 
@@ -48,10 +56,16 @@ En producción, programa `GET /api/cron/uptime?token=$CRON_TOKEN` cada 5–15 mi
 "central": {
   "command": "bun",
   "args": ["/ruta/a/Central/src/mcp/server.ts"],
-  "env": { "DATABASE_URL": "postgresql://central:central@localhost:5433/central" }
+  "env": { "DATABASE_URL": "postgresql://usuario:contraseña@localhost:5433/central" }
 }
 ```
 
-## Despliegue
+Herramientas y uso en [docs/MCP.md](docs/MCP.md).
 
-`Dockerfile` listo para Easypanel en Hetzner (Next.js standalone). Define `DATABASE_URL`, `CENTRAL_PASSWORD`, `CENTRAL_SESSION_SECRET` y `CRON_TOKEN`.
+## Documentación
+
+- [Visión](docs/VISION.md) y [hoja de ruta](docs/ROADMAP.md)
+- [Arquitectura](docs/ARQUITECTURA.md), [modelo de datos](docs/MODELO-DATOS.md) y [decisiones](docs/DECISIONES.md)
+- [Escáner](docs/ESCANER.md), [servidores y uptime](docs/SERVIDORES.md) e [integraciones](docs/INTEGRACIONES.md)
+- [Interfaz](docs/UI.md) y [MCP](docs/MCP.md)
+- Cambios por versión en [CHANGELOG.md](CHANGELOG.md)

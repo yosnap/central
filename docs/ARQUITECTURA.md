@@ -6,7 +6,7 @@
                 └────────────────────────────────────────────────────────────────────────────────────┘
                          ▲                         ▲                          ▲
        scripts/scan.ts ──┘   /api/cron/uptime ─────┘        src/mcp/server.ts ┘  (stdio)
-   (carpetas del Mac)       (cron Easypanel / n8n)        (Claude Desktop, Claude Code, otras apps)
+   (carpetas del Mac)       (servicio «tareas»)           (Claude Desktop, Claude Code, otras apps)
 ```
 
 ## Piezas
@@ -20,7 +20,7 @@
 
 ## Despliegue (Dokploy · Sn4p.dev, central.sn4p.dev)
 
-- **Código**: repositorio privado `yosnap/central`; Dokploy despliega el compose `docker-compose.prod.yml` en cada push a `main`.
+- **Código**: repositorio `yosnap/central`; Dokploy despliega el compose `docker-compose.prod.yml` en cada push a `main`.
 - **Servicios**: `web` (Next, puerto 3000, dominio), `tareas` (`scripts/tareas-servidor.ts`: servidores cada minuto, uptime y Uptime Kuma cada 10 minutos), `db` (PostgreSQL) y `kuma` (Uptime Kuma); solo `web` se publica. Una sola imagen (`Dockerfile`, Bun) con `openssh-client`.
 - **Esquema**: migraciones de Prisma (`prisma/migrations`, línea base `0_init`); `web` aplica `prisma migrate deploy` al arrancar. Para cambios nuevos: `bunx prisma migrate dev --name <cambio>`.
 - **Variables**: `bun run produccion:variables` las prepara en el Mac y las copia al portapapeles para pegarlas en Dokploy (Entorno), sin mostrarlas. Usa la misma `CENTRAL_ENCRYPTION_KEY` que el Mac, para que los secretos de la BD sigan valiendo. La clave SSH de solo lectura de infobar y las huellas de los servidores van en base64 (`CENTRAL_SSH_KEY_B64`, `CENTRAL_SSH_KNOWN_HOSTS_B64`); `scripts/docker-entrypoint.sh` las escribe al arrancar; las huellas confirmadas después viven en la BD.
