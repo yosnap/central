@@ -21,8 +21,8 @@ export const STATUS_LABEL = { ACTIVE: 'Activo', MAINTENANCE: 'Mantenimiento', DO
 export const WEB_KIND_LABEL = { CLIENT: 'Cliente', OWN: 'Propia', CENTRAL: 'Centralizada' } as const
 export const TYPE_LABEL = {
   WEB_SITE: 'Web corporativa / landing', WEB_APP: 'Aplicación web / SaaS', ECOMMERCE: 'E-commerce', API: 'API / backend',
-  ADDON: 'Addon / módulo de un sistema', PLUGIN: 'Plugin / tema de una plataforma', MOBILE_APP: 'App móvil', DESKTOP_APP: 'App de escritorio',
-  BROWSER_EXTENSION: 'Extensión de navegador', LIBRARY: 'MCP / CLI / librería', AUTOMATION: 'Automatización', CONTENT: 'Contenido / formación',
+  ADDON: 'Addon / módulo de un sistema', PLUGIN: 'Plugin / tema de una plataforma', MOBILE_APP: 'App móvil', DESKTOP_APP: 'App de escritorio / utilidad (Mac, Windows)',
+  BROWSER_EXTENSION: 'Extensión de navegador', LIBRARY: 'MCP / CLI / librería', SKILL: 'Skill de agente', AUTOMATION: 'Automatización', CONTENT: 'Contenido / formación',
 } as const
 export const PLATFORM_LABEL = {
   WORDPRESS: 'WordPress', WOOCOMMERCE: 'WooCommerce', PRESTASHOP: 'PrestaShop', SHOPIFY: 'Shopify', N8N: 'n8n', CHROME: 'Chrome', ELEMENTOR: 'Elementor', OTHER: 'Otra',

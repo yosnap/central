@@ -68,7 +68,7 @@ export interface ScannedProject {
   onlyWorktrees: boolean
 }
 
-const MARKERS = ['package.json', 'composer.json', 'pyproject.toml', 'requirements.txt', 'go.mod', 'wp-config.php', 'Cargo.toml', 'pubspec.yaml', 'angular.json']
+const MARKERS = ['package.json', 'composer.json', 'pyproject.toml', 'requirements.txt', 'go.mod', 'wp-config.php', 'Cargo.toml', 'pubspec.yaml', 'angular.json', 'SKILL.md']
 const SKIP = new Set(['node_modules', 'vendor', '.next', 'dist', 'build', '.git', '.venv', 'venv', '__pycache__', '.nuxt', '.astro', '.turbo', 'wp-content', 'wp-includes', 'wp-admin', '.cache', 'coverage', 'out', 'target', '.svelte-kit', 'storage', 'public'])
 // Carpetas que nunca se abren (credenciales)
 const SECRET = /(claves|api ?keys|secret|secrets|proxies|credentials|\.ssh)/i
