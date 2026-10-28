@@ -8,9 +8,10 @@ import { cn } from './cn'
  * Cabecera de página. `back` pone una flecha para volver en la misma fila del título; `title` puede ser un
  * elemento (p. ej. un `InlineField` con un `<h1>` dentro) para editar el nombre en su sitio.
  */
-export function PageTitle({ title, sub, action, back }: { title: ReactNode; sub?: ReactNode; action?: ReactNode; back?: { href: string; label: string } }) {
+/** `sticky`: se queda arriba al hacer scroll (en escritorio), con fondo para tapar lo que pasa por debajo. */
+export function PageTitle({ title, sub, action, back, sticky = false }: { title: ReactNode; sub?: ReactNode; action?: ReactNode; back?: { href: string; label: string }; sticky?: boolean }) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <header className={cn('mb-8 flex flex-wrap items-end justify-between gap-4', sticky && 'lg:sticky lg:top-0 lg:z-20 lg:-mx-12 lg:border-b lg:border-line lg:bg-ground/95 lg:px-12 lg:pb-4 lg:pt-6 lg:backdrop-blur')}>
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
           {back && (

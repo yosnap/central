@@ -64,6 +64,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   return (
     <>
       <PageTitle
+        sticky
         title={p.name}
         sub={<><Pill tone={statusTone(p.status)}>{STATUS_LABEL[p.status]}</Pill><Pill tone={p.deployStatus === 'PRODUCTION' ? 'ok' : p.deployStatus === 'UNKNOWN' ? 'warn' : 'muted'}>{DEPLOY_LABEL[p.deployStatus]}</Pill>{p.type && <Pill tone="accent">{TYPE_LABEL[p.type]}{p.platform ? ` · ${PLATFORM_LABEL[p.platform]}` : ''}</Pill>}{p.client && <Link href={`/clientes/${p.client.id}`} className="ml-1 font-semibold text-accent-strong hover:underline">{p.client.name}</Link>}<span className="ml-1">{[p.client ? null : KIND_LABEL[p.kind], p.version && `v${p.version}`, p.framework ?? (p.stack.join(', ') || null)].filter(Boolean).join(' · ')}</span>{p.parent && <span>· de <Link href={`/proyectos/${p.parent.id}`} className="font-semibold text-accent-strong hover:underline">{p.parent.name}</Link></span>}</>}
         action={
@@ -210,7 +211,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           </ActionForm>
         </Card>
 
-        <LocationsCard locations={p.locations} />
+        <LocationsCard projectId={p.id} locations={p.locations} />
 
         <Card title="Notas" className="xl:col-span-3">
           <ActionForm action={addNote} success="Nota añadida" className="mb-5 flex flex-col gap-3">
