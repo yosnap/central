@@ -16,12 +16,13 @@ import { auditDir } from '../src/lib/audit'
 import { runAssistant } from '../src/lib/claude-cli'
 import { pathMap, scanRoots } from '../src/lib/scan-roots'
 import { readContainerEnv } from '../src/lib/servers/service-env'
+import { worktreeOp } from '../src/lib/worktrees'
 import { ADMIN_USER_RE, existingAdminPublicKey, hostTarget, installInfobar, KNOWN_HOST_RE, knownFingerprints } from '../src/lib/servers/install'
 
 const BASE = (process.env.CENTRAL_URL ?? '').replace(/\/$/, '')
 const TOKEN = process.env.CENTRAL_WORKER_TOKEN ?? ''
 const EVERY_MS = 5000
-const VERSION = '3'
+const VERSION = '4'
 // una carpeta por presupuesto: Claude Code sigue la conversación (--resume) desde la misma carpeta
 const WORK = path.join(os.homedir(), 'Library', 'Application Support', 'Central', 'quotes')
 // carpetas que el Mac deja escanear; las decide el Mac, no Central (separadas por «;»)
@@ -74,6 +75,11 @@ async function trustConfirmedHost(host: string, port: number, hostKey: string | 
   await fs.mkdir(path.join(os.homedir(), '.ssh'), { recursive: true, mode: 0o700 })
   await fs.appendFile(path.join(os.homedir(), '.ssh', 'known_hosts'), `${hostTarget(host, port)} ${type} ${key}\n`, { mode: 0o600 })
 }
+
+const Worktree = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('remove'), repo: z.string().max(1000), path: z.string().max(1000) }),
+  z.object({ action: z.literal('prune'), repo: z.string().max(1000) }),
+])
 
 const Scan = z.object({ fetch: z.enum(['none', 'active', 'all']), known: z.array(z.string().max(1000)).max(20_000) })
 
@@ -130,6 +136,14 @@ const handlers: Record<string, (payload: unknown) => Promise<unknown>> = {
       } catch (e) { errors.push((e as Error).message) }
     }
     return { entries: [...merged].map(([key, value]) => ({ key, value })), from, errors }
+  },
+
+  /** Borra un worktree fusionado o limpia los huérfanos, solo en repositorios dentro de CENTRAL_WORKER_ROOTS y sin forzar. */
+  async worktree(payload) {
+    const op = Worktree.parse(payload)
+    const inside = (p: string) => ROOTS.some((r) => p.startsWith(r.replace(/\/$/, '') + '/'))
+    if (!inside(op.repo)) return { ok: false, error: 'Ese repositorio no está en las carpetas que este Mac deja tocar' }
+    return worktreeOp(op)
   },
 
   /** Una vuelta del asistente de presupuestos: baja los documentos nuevos a su carpeta y ejecuta Claude Code. */
