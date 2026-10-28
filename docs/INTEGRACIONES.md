@@ -11,7 +11,7 @@ Todo secreto se guarda cifrado (`IntegrationConnection.secret`, AES-256-GCM).
 
 ## 1. Portfolio: sn4p.dev
 
-El portfolio es **sn4p.dev** (`/ruta/a/tus/proyectos/Personales/Sn4p.dev/sn4p.dev`, Astro + Hono + Drizzle/SQLite). Documentación de su API: `docs/api-endpoints.md` de ese repo; Swagger en `https://sn4p.dev/api/docs`.
+El portfolio es **sn4p.dev** (Astro + Hono + Drizzle/SQLite, en su propio repositorio). Documentación de su API: `docs/api-endpoints.md` de ese repo; Swagger en `https://sn4p.dev/api/docs`.
 
 ### Autenticación
 

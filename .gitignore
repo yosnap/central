@@ -21,3 +21,6 @@ backups/
 
 # documentos subidos al asistente de presupuestos
 storage/
+
+# planes de trabajo e informes: solo en local
+plans/

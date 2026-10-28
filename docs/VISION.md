@@ -6,7 +6,7 @@ Documento vivo con todas las ideas de Paulo para Central. Lo que ya está constr
 
 ## 1. Para qué existe
 
-1. **Organizar y compactar** toda la información que hoy está repartida en carpetas (`/ruta/a/tus/proyectos` y las que se añadan): qué proyectos hay, de quién son, en qué estado, dónde están publicados y qué sobra en disco.
+1. **Organizar y compactar** toda la información que hoy está repartida en carpetas (las carpetas de proyectos del Mac y las que se añadan): qué proyectos hay, de quién son, en qué estado, dónde están publicados y qué sobra en disco.
 2. **Una sola fuente de verdad** para el bot y los agentes (vía MCP): cualquier pregunta sobre un proyecto, un cliente o una web se responde desde Central.
 3. **Material comercial reutilizable**: cada proyecto con su miniatura, enlaces, métricas y textos para enviarlo al portfolio o montar vídeos sin buscar nada a mano.
 4. **Gestión del negocio**: presupuestos con logo y fases, agenda, correo y notas por cliente.

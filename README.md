@@ -16,7 +16,7 @@ cp .env.example .env          # y rellena las contraseñas
 docker compose up -d          # Postgres en localhost:5433
 bun install
 bunx prisma db push            # crea las tablas
-bun run scan                  # importa /ruta/a/tus/proyectos (SCAN_ROOTS)
+bun run scan                  # importa las carpetas de SCAN_ROOTS
 bun run dev                   # http://localhost:3099
 ```
 

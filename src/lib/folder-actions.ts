@@ -35,7 +35,9 @@ function shortcuts() {
 
 export async function browseFolder(target?: string): Promise<FolderListing> {
   await requireSession()
-  const start = fs.existsSync('/ruta/a/tus/proyectos') ? '/ruta/a/tus/proyectos' : os.homedir()
+  // la primera carpeta de SCAN_ROOTS si existe; si no, la carpeta personal
+  const root = (process.env.SCAN_ROOTS ?? '').split(';').find((r) => r && fs.existsSync(r))
+  const start = root ?? os.homedir()
   const dir = path.resolve(target || start)
   const parts = dir.split(path.sep).filter(Boolean)
   const crumbs = [{ name: '/', path: '/' }, ...parts.map((name, i) => ({ name, path: '/' + parts.slice(0, i + 1).join('/') }))]
