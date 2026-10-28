@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.2 — 2026-10-28
+
+- Secretos: copiar del servidor pone al día los secretos con lo desplegado (y guarda copia nueva solo si cambió); el botón solo sale en entornos con contenedores enlazados.
+- Ficha del proyecto con cabecera fija al hacer scroll (nombre, estado, datos y botones).
+- Worktrees: «Borrar» en los ya fusionados y sin cambios, y «Limpiar» para los huérfanos; desde producción lo hace el trabajador del Mac.
+- Servicios con el logo de su tecnología: bases de datos y almacenamiento por la imagen del contenedor (PostgreSQL, MySQL, MongoDB, Redis, MinIO, SeaweedFS, n8n…), la aplicación con el framework del proyecto (Next.js, Nuxt, Astro, Laravel…) y un icono genérico para el resto.
+- Orden de los servicios de cada entorno arrastrando (dnd-kit), también con el teclado.
+
 ## 0.4.1 — 2026-10-28
 
 - Copias de secretos del entorno desplegado (pruebas y producción) cada día, leídas de los contenedores enlazados; también desde producción con el trabajador del Mac.
