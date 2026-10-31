@@ -4,7 +4,7 @@ Tres piezas:
 
 0. **Uptime Kuma** *(montado en el Mac: servicio `kuma` del `docker-compose.yml`, http://localhost:3098)*: la herramienta open source que vigila todas las webs y **avisa en cuanto una cae**. Ver §0.
 
-1. **Webs y servicios** *(hecho)*: cada URL de un servicio de proyecto (o web suelta) se comprueba por HTTP desde Central: en línea/caída, código, tiempo de respuesta, histórico de 30 días. Ver `src/lib/uptime.ts`.
+1. **Webs y servicios** *(hecho)*: cada URL de un servicio de proyecto (o web suelta) se comprueba por HTTP desde Central: en línea/caída, código, tiempo de respuesta, histórico de 30 días. Ver `src/lib/uptime.ts`. Un servicio que se llama api, backend o server cuenta como en línea con 2xx-4xx (su raíz no tiene página); la web de un servicio se llama «Proyecto · servicio» y se pone al día sola (`src/lib/website-label.ts`).
 2. **Servidores** *(hecho, fase 3b)*: el estado de cada VPS donde están desplegados los proyectos, con el mismo enfoque que **CostGuard / infobar** (guía en `docs/guia-servidores.md` del repositorio de CostGuard). **Central es la fuente**: los servidores se dan de alta en Central y CostGuard los lee de `GET /api/servidores` (con `Authorization: Bearer $CENTRAL_API_TOKEN`); no se importa nada de CostGuard. Código en `src/lib/servers/`, scripts del servidor en `remote/`, lectura con `bun run servidores` (tarea del Mac cada minuto).
 
 ---

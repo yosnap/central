@@ -2,6 +2,7 @@
  * Monitores de Uptime Kuma creados y actualizados desde las webs vigiladas de Central,
  * a través de su API de socket.io (la misma que usa su panel). No registra credenciales.
  */
+import { isApiService, syncWebsiteLabels } from './website-label'
 import { randomBytes } from 'node:crypto'
 import { io, type Socket } from 'socket.io-client'
 import { AUDIT_WHERE } from './audit-import'
@@ -109,18 +110,20 @@ async function syncPush(client: KumaClient, rows: PushRow[], label: string, mark
 }
 
 function monitorFor(site: { id: string; url: string; label: string | null; project: { name: string } | null; service: { name: string } | null }, notifications: KumaNotification[]) {
+  const api = isApiService(site.service?.name)
   const name = site.label ?? (site.project ? `${site.project.name} · ${site.service?.name ?? 'web'}` : site.url.replace(/^https?:\/\//, ''))
   return {
     type: 'http', name, url: site.url, method: 'GET', description: `${MARK}${site.id}`,
     interval: 60, retryInterval: 60, maxretries: 1, resendInterval: 0, timeout: 48,
     expiryNotification: true, ignoreTls: false, upsideDown: false, maxredirects: 10,
-    accepted_statuscodes: ['200-299'], conditions: [], active: true,
+    accepted_statuscodes: api ? ['200-499'] : ['200-299'], conditions: [], active: true,
     notificationIDList: defaultNotifications(notifications),
   }
 }
 
 /** Crea, actualiza o borra monitores para que coincidan con las webs vigiladas de Central. */
 export async function syncKuma(): Promise<{ created: number; updated: number; deleted: number } | null> {
+  await syncWebsiteLabels().catch(() => 0)
   const conn = await kumaConnection()
   if (!conn) return null
   const client = await KumaClient.connect(conn)

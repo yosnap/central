@@ -7,6 +7,7 @@ import { prisma } from '../prisma'
 import { hostOf, matchContainers } from './match'
 import { refreshServiceVersion } from '../deploy-version'
 import { ROLE_LABEL } from './role'
+import { isApiService, serviceSiteLabel } from '../website-label'
 
 /** Opciones para elegir proyecto: cada servicio existente y, por proyecto, «nuevo servicio». */
 export async function linkOptions() {
@@ -42,18 +43,18 @@ export async function linkContainer(containerId: string, target: string, environ
   } else if (target.startsWith('prj:')) {
     const project = await prisma.project.findUniqueOrThrow({ where: { id: target.slice(4) }, include: { services: true } })
     const hosts = new Set(c.domains)
-    const name = c.role && c.role !== 'app' && c.role !== 'other' ? SERVICE_NAME[c.role] ?? ROLE_LABEL[c.role].toLowerCase() : 'web'
+    const name = c.role && c.role !== 'app' && c.role !== 'other' ? SERVICE_NAME[c.role] ?? ROLE_LABEL[c.role].toLowerCase() : isApiService(c.name) ? 'api' : 'web'
     const env = environment ?? envFromDomain(c.domains[0])
     const existing = project.services.find((s) => s.url && hosts.has(hostOf(s.url) ?? '')) ?? project.services.find((s) => s.name === name && s.environment === env && !s.serverId)
     if (existing) serviceId = existing.id
     else {
       // solo las webs se vigilan por su dominio; el de un visor de base de datos no es la web del proyecto
-      const url = name === 'web' && c.domains[0] ? `https://${c.domains[0]}` : null
+      const url = (name === 'web' || name === 'api') && c.domains[0] ? `https://${c.domains[0]}` : null
       // con dominio, se vigila como cualquier servicio con URL (Webs y Uptime Kuma)
       const site = url ? await prisma.website.upsert({
         where: { url },
         update: { projectId: project.id },
-        create: { url, projectId: project.id, clientId: project.clientId, monitored: true, kind: project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: `${project.name} · ${name}` },
+        create: { url, projectId: project.id, clientId: project.clientId, monitored: true, kind: project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: serviceSiteLabel(project.name, name, env) },
       }) : null
       if (site) await prisma.projectService.updateMany({ where: { websiteId: site.id }, data: { websiteId: null } })
       const created = await prisma.projectService.create({

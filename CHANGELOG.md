@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.3 — 2026-10-31
+
+- Webs: el nombre de la web de un servicio sigue al servicio y al proyecto («Proyecto · api», con «(pruebas)» si es de pruebas) aunque se renombren después.
+- Una API o un backend se da por en línea aunque su raíz responda 4xx (en el comprobador propio y en Uptime Kuma).
+- Al enlazar un contenedor de backend o API se crea el servicio «api», no «web».
+
 ## 0.4.2 — 2026-10-28
 
 - Secretos: copiar del servidor pone al día los secretos con lo desplegado (y guarda copia nueva solo si cambió); el botón solo sale en entornos con contenedores enlazados.

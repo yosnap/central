@@ -7,6 +7,7 @@ import { prisma } from './prisma'
 import { linkContainer } from './servers/link'
 import { matchContainers } from './servers/match'
 import { requireSession } from './session'
+import { serviceSiteLabel, syncWebsiteLabels } from './website-label'
 
 const ENV = z.enum(['production', 'staging', 'development'])
 const normUrl = (u: string) => (!u ? null : /^https?:\/\//i.test(u) ? u : `https://${u}`)
@@ -29,7 +30,7 @@ async function syncWebsite(serviceId: string) {
   const site = await prisma.website.upsert({
     where: { url: s.url },
     update: { projectId: s.project.id, monitored: true },
-    create: { url: s.url, projectId: s.project.id, clientId: s.project.clientId, monitored: true, kind: s.project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: `${s.project.name} · ${s.name}` },
+    create: { url: s.url, projectId: s.project.id, clientId: s.project.clientId, monitored: true, kind: s.project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: serviceSiteLabel(s.project.name, s.name, s.environment) },
   })
   // un mismo Website solo puede estar ligado a un servicio
   await prisma.projectService.updateMany({ where: { websiteId: site.id, NOT: { id: s.id } }, data: { websiteId: null } })
@@ -54,6 +55,7 @@ export async function updateServiceField(form: FormData) {
   if (!r.success) return { error: r.error.issues.map((i) => i.message).join('. ') }
   await prisma.projectService.update({ where: { id }, data: { [field]: r.data } })
   if (field === 'url') await syncWebsite(id)
+  if (field === 'name' || field === 'environment') await syncWebsiteLabels()
   if (field === 'serverId' && r.data) await matchContainers(r.data as string)
   await refresh(id)
 }
