@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.5 — 2026-10-31
+
+- Webs solo lista las webs vigiladas y las sueltas: un servicio sin «Vigilar» (como una API) no aparece en Webs, solo en la ficha de su proyecto.
+
 ## 0.4.4 — 2026-10-31
 
 - Quitar «Vigilar» a un servicio ya no deja su web suelta y vigilada: sigue ligada al servicio, con su nombre, y sale «Sin vigilar» en Webs (ni caída ni en Uptime Kuma). Las webs que se quedaron sueltas vuelven a su servicio por la URL.

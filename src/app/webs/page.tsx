@@ -33,7 +33,8 @@ export default async function WebsPage() {
   await requireSession()
   const since = new Date(Date.now() - 7 * 864e5)
   const [sites, clients] = await Promise.all([
-    prisma.website.findMany({ include: { client: true, project: true }, orderBy: [{ kind: 'asc' }, { url: 'asc' }] }),
+    // la web de un servicio sin «Vigilar» (una API, p. ej.) no es una web que vigilar: se ve en la ficha del proyecto
+    prisma.website.findMany({ where: { OR: [{ monitored: true }, { service: null }] }, include: { client: true, project: true }, orderBy: [{ kind: 'asc' }, { url: 'asc' }] }),
     prisma.client.findMany({ select: { name: true }, orderBy: { name: 'asc' } }),
   ])
   const stats = await prisma.uptimeCheck.groupBy({ by: ['websiteId', 'up'], where: { checkedAt: { gte: since } }, _count: true, _avg: { ms: true } })
