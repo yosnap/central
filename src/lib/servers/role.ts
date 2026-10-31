@@ -16,6 +16,12 @@ const RULES: [string, RegExp][] = [
   ['panel', /easypanel|dokploy|coolify|portainer|caprover/],
 ]
 
+/**
+ * Del propio servidor: el panel y lo que arranca con él («dokploy-postgres», «easypanel-traefik», «coolify-redis»…).
+ * Por el nombre del servicio, no por la imagen: las apps que construye Easypanel llevan imagen «easypanel/…».
+ */
+export const isInfra = (name: string) => /^(easypanel|dokploy|coolify|portainer|caprover)([_.-]|$)/i.test(name)
+
 export function roleOf(image: string | null | undefined, name: string): string {
   // Easypanel llama a las imágenes que construye «easypanel/<proyecto>/<servicio>»: son apps, no el panel
   const own = image && /^easypanel\/[^/]+\/[^/]+/.test(image) ? null : image

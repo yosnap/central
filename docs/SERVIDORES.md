@@ -97,6 +97,7 @@ Las 13 comprobaciones de protección (las 12 de la guía más «sin reinicio pen
 
 - Cada **servicio de proyecto** (`ProjectService`) puede indicar en qué **servidor** está desplegado y con qué **panel** (Easypanel, Dokploy, Docker a secas).
 - Los **servicios de Docker/Swarm** que reporta el servidor se emparejan con los servicios de proyecto (por nombre de servicio/contenedor o dominio), así la ficha del proyecto muestra: web en línea + contenedor con sus réplicas + estado del servidor donde vive.
+- El **panel y lo que arranca con él** (`dokploy-postgres`, `easypanel-traefik`, `coolify-redis`…) se reconocen por el nombre como **infraestructura del servidor** (`src/lib/servers/role.ts`, `isInfra`): no son de ningún proyecto, salen al final de la tabla y no cuentan como «sin proyecto» ni en Pendientes. A mano se elige «Infraestructura del servidor» en el desplegable. El dominio propio del panel rellena `panelUrl` si está vacío, y «Vigilar panel» en la ficha lo lleva a Webs centralizadas y a Uptime Kuma.
 - La ficha del servidor lista qué proyectos y webs aloja. Si un servidor cae, Pendientes/Resumen muestran qué proyectos afecta.
 - **Uptime por proyecto** = el de sus servicios (web, api, admin…) + el estado del servidor que los aloja.
 

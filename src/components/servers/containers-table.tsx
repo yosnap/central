@@ -5,7 +5,7 @@ import { InlineField, Pill, Table, type Option } from '@/components/ui'
 
 export type ContainerRow = {
   id: string; name: string; kind: string; state: string; detail: string | null; desired: number | null; running: number | null
-  image: string | null; version?: string | null; role: string | null; domains: string[]; projectServiceId: string | null; matchManual: boolean
+  image: string | null; version?: string | null; role: string | null; domains: string[]; projectServiceId: string | null; matchManual: boolean; infra: boolean
   projectService?: { name: string; project: { id: string; name: string } } | null
   server?: { id: string; name: string }
 }
@@ -13,9 +13,9 @@ export type ContainerRow = {
 const STATE = { down: ['bad', 'Caído'], stopped: ['warn', 'Parado'], ok: ['ok', 'En marcha'] } as const
 const ORDER = ['down', 'stopped', 'ok']
 
-/** Tabla de servicios Docker con qué es cada uno, qué dominios sirve y a qué proyecto pertenece (editable). */
+/** Tabla de servicios Docker con qué es cada uno, qué dominios sirve y a qué proyecto pertenece (editable). La infraestructura del servidor va al final. */
 export function ContainersTable({ containers, options, showServer }: { containers: ContainerRow[]; options: Option[]; showServer?: boolean }) {
-  const sorted = [...containers].sort((a, b) => ORDER.indexOf(a.state) - ORDER.indexOf(b.state) || a.name.localeCompare(b.name))
+  const sorted = [...containers].sort((a, b) => Number(a.infra) - Number(b.infra) || ORDER.indexOf(a.state) - ORDER.indexOf(b.state) || a.name.localeCompare(b.name))
   return (
     <Table head={[...(showServer ? ['Servidor'] : []), 'Servicio', 'Tipo', 'Dominios', 'Estado', 'Proyecto']}>
       {sorted.map((c) => {
@@ -40,9 +40,10 @@ export function ContainersTable({ containers, options, showServer }: { container
             <td className="whitespace-nowrap"><Pill tone={tone}>{text}</Pill><div className="num mt-1 text-sm text-muted">{c.kind === 'swarm' ? c.detail : c.desired != null ? `${c.running}/${c.desired}` : ''}</div></td>
             <td className="min-w-72">
               <InlineField action={linkContainerAction} fields={{ id: c.id }} name="target" label={`Proyecto de ${c.name}`} hideLabel kind="combobox" allowCustom={false} options={options}
-                value={c.matchManual && c.projectServiceId ? `svc:${c.projectServiceId}` : ''}
+                value={c.matchManual && c.infra ? 'infra' : c.matchManual && c.projectServiceId ? `svc:${c.projectServiceId}` : ''}
                 display={linked
                   ? <><Link href={`/proyectos/${linked.project.id}`} className="font-medium text-accent-strong hover:underline">{linked.project.name}</Link><span className="text-muted"> · {linked.name}</span>{!c.matchManual && <span className="ml-2 text-sm text-muted">reconocido</span>}</>
+                  : c.infra ? <span>Infraestructura del servidor{!c.matchManual && <span className="ml-2 text-sm text-muted">reconocido</span>}</span>
                   : <span className="text-muted">Sin proyecto</span>}
                 placeholder="Busca un proyecto…" success="Enlazado" />
             </td>

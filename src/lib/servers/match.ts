@@ -3,6 +3,7 @@
  * y qué contenedor o servicio Docker le corresponde (por nombre). Lo que se empareja a mano no se toca.
  */
 import { prisma } from '../prisma'
+import { isInfra } from './role'
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
 export const hostOf = (url: string) => { try { return new URL(/^https?:\/\//.test(url) ? url : `https://${url}`).hostname.toLowerCase() } catch { return null } }
@@ -43,7 +44,7 @@ export async function matchContainers(serverId: string) {
     const host = svc.url ? hostOf(svc.url) : null
     let best: { id: string; score: number } | null = null, tie = false
     for (const c of containers) {
-      if (c.matchManual) continue
+      if (c.matchManual || isInfra(c.name)) continue
       // Easypanel nombra «proyecto_servicio», Compose «proyecto-servicio-1» y Dokploy «proyecto-app-xxxx»
       const name = norm(c.name)
       let score = 0
@@ -60,7 +61,11 @@ export async function matchContainers(serverId: string) {
   }
   for (const c of containers) {
     if (c.matchManual) continue
-    const next = wanted.get(c.id) ?? null
-    if (next !== c.projectServiceId) await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: next } })
+    const infra = isInfra(c.name)
+    const next = infra ? null : wanted.get(c.id) ?? null
+    if (next !== c.projectServiceId || infra !== c.infra) await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: next, infra } })
   }
+  // el dominio propio que sirve el panel es su dirección, si no se ha puesto a mano
+  const panel = containers.find((c) => (c.matchManual ? c.infra : isInfra(c.name)) && c.role === 'panel' && c.domains.some((d) => !PANEL_DOMAIN.test(d)))
+  if (panel) await prisma.server.updateMany({ where: { id: serverId, panelUrl: null }, data: { panelUrl: `https://${panel.domains.find((d) => !PANEL_DOMAIN.test(d))}` } })
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.6 — 2026-10-31
+
+- Un servicio sin «Vigilar» ya no sale como caído ni en línea con un resultado antiguo: al dejar de vigilarlo se borra su último estado (también el que ya estaba guardado).
+- Infraestructura del servidor: el panel (Dokploy, Easypanel, Coolify…) y lo que arranca con él (su base de datos, su caché, su proxy) se reconocen solos, salen aparte en la ficha del servidor y no cuentan como «sin proyecto» ni en Pendientes. También se puede elegir a mano en el desplegable de proyecto.
+- El dominio propio del panel rellena «Abrir panel» si estaba vacío, y «Vigilar panel» lo lleva a Webs centralizadas y a Uptime Kuma.
+- Webs centralizadas explica qué son: lo compartido que no es de un proyecto (paneles, n8n, APIs comunes).
+
 ## 0.4.5 — 2026-10-31
 
 - Webs solo lista las webs vigiladas y las sueltas: un servicio sin «Vigilar» (como una API) no aparece en Webs, solo en la ficha de su proyecto.

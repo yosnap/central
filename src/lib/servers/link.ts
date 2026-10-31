@@ -1,7 +1,7 @@
 /**
  * Enlace entre un servicio Docker y un proyecto, el mismo desde Servidores, Pendientes y la ficha del proyecto.
  * Destino: «svc:<id>» = un servicio de proyecto que ya existe; «prj:<id>» = un proyecto (se usa el servicio con su
- * dominio o nombre, o se crea uno); vacío = volver al emparejado automático.
+ * dominio o nombre, o se crea uno); «infra» = del propio servidor (panel y lo suyo); vacío = volver al emparejado automático.
  */
 import { prisma } from '../prisma'
 import { hostOf, matchContainers } from './match'
@@ -18,6 +18,7 @@ export async function linkOptions() {
   })
   return [
     { value: '', label: 'Automático (por dominio y nombre)' },
+    { value: 'infra', label: 'Infraestructura del servidor', hint: 'panel, su base de datos, su caché o su proxy' },
     ...projects.flatMap((p) => [
       ...p.services.map((s) => ({ value: `svc:${s.id}`, label: `${p.name} · ${s.name}${s.environment === 'production' ? '' : ` (${s.environment})`}`, hint: s.url?.replace(/^https?:\/\//, '') ?? undefined })),
       { value: `prj:${p.id}`, label: p.services.length ? `${p.name} · nuevo servicio` : p.name, hint: p.services.length ? undefined : 'sin servicios: se crea uno' },
@@ -35,6 +36,10 @@ export async function linkContainer(containerId: string, target: string, environ
   if (!target) {
     await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: null, matchManual: false } })
     await matchContainers(c.serverId)
+    return
+  }
+  if (target === 'infra') {
+    await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: null, infra: true, matchManual: true } })
     return
   }
   let serviceId: string
@@ -71,7 +76,7 @@ export async function linkContainer(containerId: string, target: string, environ
     if (!svc.url) await prisma.projectService.update({ where: { id: serviceId }, data: { url: `https://${c.domains[0]}`, monitor: true } })
   }
   await prisma.projectService.update({ where: { id: serviceId }, data: { serverId: c.serverId } })
-  await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: serviceId, matchManual: true } })
+  await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: serviceId, infra: false, matchManual: true } })
   // un servicio de producción en un servidor: si el proyecto no decía nada de su despliegue, está en producción
   const svc = await prisma.projectService.findUniqueOrThrow({ where: { id: serviceId }, select: { environment: true, projectId: true } })
   if (svc.environment === 'production') await prisma.project.updateMany({ where: { id: svc.projectId, deployStatus: 'UNKNOWN' }, data: { deployStatus: 'PRODUCTION' } })

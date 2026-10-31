@@ -288,6 +288,8 @@ model Website {
   client        Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
   projectId     String?
   project       Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  serverId      String?       // la web del panel de un servidor
+  server        Server?       @relation(fields: [serverId], references: [id], onDelete: SetNull)
   checks        UptimeCheck[]
   notes         Note[]
   service       ProjectService?
@@ -695,6 +697,7 @@ model Server {
   attackIps     ServerAttackIp[]
   deployments   Deployment[]
   services      ProjectService[]
+  websites      Website[] // la web de su panel (centralizada)
   kumaPushId    Int?      // monitor push de Uptime Kuma «Servidor · parches de seguridad»
   kumaPushToken String?
   createdAt     DateTime  @default(now())
@@ -769,6 +772,7 @@ model ServerContainer {
   projectServiceId String?
   projectService   ProjectService? @relation(fields: [projectServiceId], references: [id], onDelete: SetNull)
   matchManual      Boolean         @default(false) // emparejado a mano: el automático no lo toca
+  infra            Boolean         @default(false) // del propio servidor (panel, su base de datos, su caché, su proxy), no de un proyecto
   seenAt           DateTime        @default(now())
   deployments      Deployment[]
 

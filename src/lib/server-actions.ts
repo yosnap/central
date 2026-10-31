@@ -10,6 +10,7 @@ import { ADMIN_USER_RE, adminPublicKey, installInfobar } from './servers/install
 import { HOST_RE, NAME_RE, trustHost } from './servers/register'
 import { requireSession } from './session'
 import { enqueue, isRemote, macOnline, pendingFor } from './worker'
+import { watchData } from './website-label'
 
 const opt = (max: number) => z.string().trim().max(max).optional().transform((v) => v || null)
 const ServerForm = z.object({
@@ -117,6 +118,21 @@ export async function linkContainerAction(form: FormData) {
   refresh()
   revalidatePath('/pendientes')
   revalidatePath('/proyectos', 'layout')
+}
+
+/** «Vigilar panel»: la dirección del panel entra en Webs (centralizada) y en Uptime Kuma, ligada al servidor y sin proyecto. */
+export async function setPanelMonitor(id: string, monitor: boolean) {
+  await requireSession()
+  const s = await prisma.server.findUniqueOrThrow({ where: { id: z.string().min(1).parse(id) }, select: { id: true, name: true, panelUrl: true } })
+  if (!s.panelUrl) throw new Error('El servidor no tiene la dirección de su panel')
+  const url = s.panelUrl.replace(/\/+$/, '')
+  const data = { label: `${s.name} · panel`, kind: 'CENTRAL' as const, serverId: s.id, ...watchData(monitor) }
+  await prisma.website.upsert({ where: { url }, update: data, create: { url, ...data } })
+  // si cambió la dirección del panel, la anterior deja de ser suya
+  await prisma.website.updateMany({ where: { serverId: s.id, NOT: { url } }, data: { serverId: null, ...watchData(false) } })
+  void import('./kuma').then((k) => k.syncKuma()).catch(() => {})
+  refresh()
+  revalidatePath('/webs')
 }
 
 /** Instala o actualiza infobar en el servidor con el usuario y la contraseña que se escriben en la ventana (no se guarda la contraseña). */

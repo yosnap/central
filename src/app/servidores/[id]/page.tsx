@@ -13,6 +13,7 @@ import { isRemote } from '@/lib/worker'
 import { InstallButton } from '@/components/servers/install-button'
 import { DeploymentsCard } from '@/components/deployments-card'
 import { ContainersCard } from '@/components/servers/containers-card'
+import { PanelWatch } from '@/components/servers/panel-watch'
 import { ProtectionCard } from '@/components/servers/protection-card'
 import { ServerCards } from '@/components/servers/server-cards'
 import { ServerDetails } from '@/components/servers/server-details'
@@ -31,6 +32,7 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
       checks: true,
       containers: { orderBy: [{ state: 'asc' }, { name: 'asc' }], include: { projectService: { select: { name: true, project: { select: { id: true, name: true } } } } } },
       attackIps: { orderBy: { attempts: 'desc' }, take: 10 },
+      websites: { select: { monitored: true, kumaStatus: true, lastStatus: true }, take: 1 },
       services: { include: { project: { select: { id: true, name: true } }, website: { select: { lastStatus: true, kumaStatus: true } }, containers: { select: { name: true, state: true } } }, orderBy: { project: { name: 'asc' } } },
     },
   })
@@ -38,6 +40,8 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
   const options = await linkOptions()
   const snap = s.snapshot as Snapshot | null
   const level = visibleStatus(s)
+  const panelSite = s.websites[0]
+  const panelStatus = panelSite?.monitored ? panelSite.kumaStatus ?? panelSite.lastStatus : null
   return (
     <>
       <PageTitle
@@ -50,6 +54,10 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
           <span>· leído {ago(s.lastOkAt)}{snap?.version != null && ` · script v${snap.version}${snap.root ? '' : ', sin root'}`}</span>
         </>}
         action={<div className="flex flex-wrap gap-2">
+          {s.panelUrl && <div className="flex items-center gap-3 pr-2">
+            {panelStatus && <Pill tone={panelStatus === 'up' ? 'ok' : 'bad'}>Panel {panelStatus === 'up' ? 'en línea' : 'caído'}</Pill>}
+            <PanelWatch id={s.id} checked={!!panelSite?.monitored} />
+          </div>}
           {s.panelUrl && <ButtonLink href={s.panelUrl} target="_blank" rel="noreferrer" variant="ghost">{s.panel ? <BrandLogo name={s.panel} /> : <ExternalLink className="size-5" aria-hidden />}Abrir panel</ButtonLink>}
           <ActionForm action={readServerNow} success="Servidor leído"><input type="hidden" name="id" value={s.id} /><SubmitButton variant="secondary" pendingText="Leyendo…"><RefreshCw className="size-5" aria-hidden />Leer ahora</SubmitButton></ActionForm>
           <ConfirmAction action={deleteServer} fields={{ id: s.id }} title={`Eliminar ${s.name}`} size="md" confirmLabel="Eliminar"

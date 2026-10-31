@@ -11,6 +11,10 @@ export const serviceSiteLabel = (project: string, service: string, environment: 
 /** Una API o un backend no tiene página en «/»: un 404 ahí también dice que el servidor responde. */
 export const isApiService = (name: string | null | undefined) => /\b(api|backend|server)\b/i.test(name ?? '')
 
+/** Sin vigilar no hay estado: el último resultado se borra para que no salga como caída ni en línea. */
+const NO_STATUS = { lastStatus: null, lastMs: null, lastCode: null, kumaStatus: null, kumaMs: null }
+export const watchData = (monitored: boolean) => (monitored ? { monitored } : { monitored, ...NO_STATUS })
+
 /**
  * Pone al día las webs de los servicios: nombre (si se renombró el servicio o el proyecto) y si se vigilan. Una web que
  * quedó suelta (antes se desligaba al quitar «Vigilar») vuelve a su servicio por la URL.
@@ -21,7 +25,7 @@ export async function syncWebsiteLabels() {
     const site = await prisma.website.findUnique({ where: { url: s.url! }, select: { id: true, service: { select: { id: true } } } })
     if (site && !site.service) {
       await prisma.projectService.update({ where: { id: s.id }, data: { websiteId: site.id } })
-      await prisma.website.update({ where: { id: site.id }, data: { monitored: s.monitor } })
+      await prisma.website.update({ where: { id: site.id }, data: watchData(s.monitor) })
     }
   }
   const services = await prisma.projectService.findMany({
@@ -32,9 +36,11 @@ export async function syncWebsiteLabels() {
   for (const s of services) {
     const label = serviceSiteLabel(s.project.name, s.name, s.environment)
     if (s.website && (s.website.label !== label || s.website.monitored !== s.monitor)) {
-      await prisma.website.update({ where: { id: s.website.id }, data: { label, monitored: s.monitor } })
+      await prisma.website.update({ where: { id: s.website.id }, data: { label, ...watchData(s.monitor) } })
       changed++
     }
   }
+  // las que ya estaban sin vigilar con un estado guardado de antes
+  await prisma.website.updateMany({ where: { monitored: false, OR: [{ lastStatus: { not: null } }, { kumaStatus: { not: null } }] }, data: NO_STATUS })
   return changed
 }

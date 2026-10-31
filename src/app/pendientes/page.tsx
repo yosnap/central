@@ -27,7 +27,7 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
   const { unprotected } = await serverAlerts()
   // servicios Docker sin proyecto: las aplicaciones y lo que sirve algún dominio (no las bases de datos internas)
   const loose = await prisma.serverContainer.findMany({
-    where: { projectServiceId: null, OR: [{ role: 'app' }, { domains: { isEmpty: false } }, { role: null }] },
+    where: { projectServiceId: null, infra: false, OR: [{ role: 'app' }, { domains: { isEmpty: false } }, { role: null }] },
     include: { server: { select: { id: true, name: true } } },
     orderBy: [{ server: { name: 'asc' } }, { name: 'asc' }],
   })

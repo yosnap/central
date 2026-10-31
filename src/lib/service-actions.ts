@@ -7,7 +7,7 @@ import { prisma } from './prisma'
 import { linkContainer } from './servers/link'
 import { matchContainers } from './servers/match'
 import { requireSession } from './session'
-import { serviceSiteLabel, syncWebsiteLabels } from './website-label'
+import { serviceSiteLabel, syncWebsiteLabels, watchData } from './website-label'
 
 const ENV = z.enum(['production', 'staging', 'development'])
 const normUrl = (u: string) => (!u ? null : /^https?:\/\//i.test(u) ? u : `https://${u}`)
@@ -32,7 +32,7 @@ async function syncWebsite(serviceId: string) {
   }
   const site = await prisma.website.upsert({
     where: { url: s.url },
-    update: { projectId: s.project.id, monitored: s.monitor },
+    update: { projectId: s.project.id, ...watchData(s.monitor) },
     create: { url: s.url, projectId: s.project.id, clientId: s.project.clientId, monitored: s.monitor, kind: s.project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: serviceSiteLabel(s.project.name, s.name, s.environment) },
   })
   // un mismo Website solo puede estar ligado a un servicio

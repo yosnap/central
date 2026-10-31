@@ -20,7 +20,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `EnvBackup` | 1 | Copia cifrada de un fichero de variables completo por entorno, con número de claves y origen (importación, antes de sustituir, manual, servidor). Solo se guarda si cambia respecto a la última |
 | `ProjectLocation` | 1 | Cada carpeta del disco de un proyecto: principal, worktree, copia o backup, con rama, último commit, ficheros sin commit (`uncommitted`) y nuevos sin versionar (`untracked`), `merged` (rama fusionada) y `missing` (worktree huérfano) |
 | `ScanRoot` | 1 | Carpetas raíz escaneadas y cuándo |
-| `Website` | 1 | Web con `kind` (cliente, propia, centralizada), último estado, código y ms |
+| `Website` | 1 | Web con `kind` (cliente, propia, centralizada: lo compartido que no es de un proyecto, como paneles o n8n), último estado, código y ms; `serverId` = la web del panel de ese servidor |
 | `Website` (Uptime Kuma) | 3a | `kumaMonitorId` (monitor creado por Central), `kumaStatus`, `kumaMs`, `sslDaysLeft`, `kumaCheckedAt`, leídos de `/metrics` |
 | `ProjectAdvisory` | 3c | Vulnerabilidad de una dependencia (osv-scanner) o rama del framework sin soporte (endoflife.date): aviso (GHSA/CVE o `EOL:producto-rama`), paquete, ecosistema, versión instalada, `fixedIn`, gravedad, resumen, enlace, `dev`, `lockfile` de origen, `firstSeenAt`/`lastSeenAt`, `resolvedAt` (ya no aparece; se borra a los 90 días) e `ignoredAt` (descartado a mano). Único por proyecto, aviso, paquete y versión |
 | `Project` / `Server` (Uptime Kuma push) | 3c | `kumaPushId` y `kumaPushToken`: monitor push «Proyecto · dependencias» o «Servidor · parches de seguridad». En `Project`, también `auditedAt` y `auditError` de la última auditoría |
@@ -28,7 +28,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `Server` | 3b | Servidor vigilado por SSH: nombre, host, puerto, usuario de recogida (`infobar`), ruta de la clave (nunca la clave), proveedor, panel y su URL, IPs conocidas, `allowMail`, intervalos normal e incidencia, estado global y vivo, error, próxima lectura, pausa tras rechazo y `snapshot` (última lectura buena interpretada) |
 | `ServerSample` / `ServerHour` | 3b | Muestras de cada lectura (7 días) y agregado por hora (90 días): CPU, memoria, disco, servicios, sesiones, intentos, puertos expuestos, estado |
 | `ServerCheck` | 3b | Las 13 comprobaciones de protección: `ok` (null = no se pudo mirar), texto y comando de arreglo |
-| `ServerContainer` | 3b | Servicio de Swarm o contenedor del servidor con estado y réplicas; `projectServiceId` lo empareja con su servicio de proyecto (`matchManual` = elegido a mano) |
+| `ServerContainer` | 3b | Servicio de Swarm o contenedor del servidor con estado y réplicas; `projectServiceId` lo empareja con su servicio de proyecto (`matchManual` = elegido a mano); `infra` = del propio servidor (panel, su base de datos, su caché, su proxy), no de un proyecto |
 | `Deployment` | 3b | Despliegue detectado (el contenedor volvió a arrancar o el servicio de Swarm se actualizó): servidor, contenedor, servicio de proyecto, fecha, imagen, versión anterior y nueva (un año) |
 | `ServerAttackIp` | 3b | IPs con más intentos de acceso SSH (90 días) |
 | `ProjectService.serverId` | 3b | Servidor donde está desplegado el servicio; se elige en la ficha o se asigna solo si el proxy de un único servidor sirve su dominio |

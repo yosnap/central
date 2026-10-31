@@ -62,7 +62,7 @@ export default async function WebsPage() {
       </Card>
       <div className="flex flex-col gap-6">
         {groups.map(({ k, list }) => (
-          <Card key={k} title={`Webs ${k === 'CLIENT' ? 'de clientes' : k === 'OWN' ? 'propias' : 'centralizadas'}`} note={`${list.length} webs · disponibilidad y respuesta media de los últimos 7 días`}>
+          <Card key={k} title={`Webs ${k === 'CLIENT' ? 'de clientes' : k === 'OWN' ? 'propias' : 'centralizadas'}`} note={`${k === 'CENTRAL' ? 'Lo compartido que no es de un proyecto: paneles de los servidores, n8n, APIs comunes. ' : ''}${list.length} webs · disponibilidad y respuesta media de los últimos 7 días`}>
             {list.length === 0 ? <Empty title="Ninguna todavía">Añádelas arriba o con <code className="font-mono">bun run websites:import</code>.</Empty> : (
               <Table head={['Web', 'Cliente / proyecto', 'Estado', 'Uptime Kuma', 'SSL', 'Uptime 7 d', 'ms medio', 'Código', 'Última']}>
                 {list.map((s) => {
