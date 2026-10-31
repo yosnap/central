@@ -1,6 +1,6 @@
 {
   "name": "central",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "private": true,
   "description": "Central — CRM personal de Paulo (iServisat): clientes, proyectos, webs, presupuestos, agenda y correo.",
   "type": "module",

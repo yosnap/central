@@ -20,17 +20,20 @@ async function refresh(serviceId?: string, projectId?: string) {
   void import('./kuma').then((k) => k.syncKuma()).catch(() => {})
 }
 
-/** Con URL y «Vigilar», el servicio tiene su web en Webs (y en Uptime Kuma); sin ellas, se desliga. */
+/**
+ * Con URL, el servicio tiene su web en Webs; «Vigilar» decide si se comprueba (y si está en Uptime Kuma). Sin URL, se
+ * desliga. Sin «Vigilar» se queda ligada, con su nombre e historial, pero sin vigilar: no sale como caída.
+ */
 async function syncWebsite(serviceId: string) {
   const s = await prisma.projectService.findUniqueOrThrow({ where: { id: serviceId }, include: { project: { select: { id: true, name: true, clientId: true, kind: true } } } })
-  if (!s.url || !s.monitor) {
+  if (!s.url) {
     if (s.websiteId) await prisma.projectService.update({ where: { id: s.id }, data: { websiteId: null } })
     return
   }
   const site = await prisma.website.upsert({
     where: { url: s.url },
-    update: { projectId: s.project.id, monitored: true },
-    create: { url: s.url, projectId: s.project.id, clientId: s.project.clientId, monitored: true, kind: s.project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: serviceSiteLabel(s.project.name, s.name, s.environment) },
+    update: { projectId: s.project.id, monitored: s.monitor },
+    create: { url: s.url, projectId: s.project.id, clientId: s.project.clientId, monitored: s.monitor, kind: s.project.kind === 'CLIENT' ? 'CLIENT' : 'OWN', label: serviceSiteLabel(s.project.name, s.name, s.environment) },
   })
   // un mismo Website solo puede estar ligado a un servicio
   await prisma.projectService.updateMany({ where: { websiteId: site.id, NOT: { id: s.id } }, data: { websiteId: null } })

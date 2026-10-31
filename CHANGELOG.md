@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.4 — 2026-10-31
+
+- Quitar «Vigilar» a un servicio ya no deja su web suelta y vigilada: sigue ligada al servicio, con su nombre, y sale «Sin vigilar» en Webs (ni caída ni en Uptime Kuma). Las webs que se quedaron sueltas vuelven a su servicio por la URL.
+
 ## 0.4.3 — 2026-10-31
 
 - Webs: el nombre de la web de un servicio sigue al servicio y al proyecto («Proyecto · api», con «(pruebas)» si es de pruebas) aunque se renombren después.

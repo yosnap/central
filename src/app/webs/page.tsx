@@ -70,8 +70,8 @@ export default async function WebsPage() {
                     <tr key={s.id}>
                       <td><a href={s.url} target="_blank" rel="noreferrer" className="font-semibold text-accent-strong hover:underline">{s.label ?? s.url.replace(/^https?:\/\//, '')}</a></td>
                       <td className="text-muted">{s.client?.name ?? s.project?.name ?? '—'}</td>
-                      <td>{s.lastStatus ? <Pill tone={s.lastStatus === 'up' ? 'ok' : 'bad'}>{s.lastStatus === 'up' ? 'En línea' : 'Caída'}</Pill> : <Pill>Sin datos</Pill>}</td>
-                      <td>{s.kumaStatus ? <Pill tone={s.kumaStatus === 'up' ? 'ok' : s.kumaStatus === 'down' ? 'bad' : 'warn'}>{KUMA_STATUS_LABEL[s.kumaStatus] ?? s.kumaStatus}{s.kumaMs != null ? ` · ${s.kumaMs} ms` : ''}</Pill> : <span className="text-muted">{s.kumaMonitorId ? 'Sin datos' : '—'}</span>}</td>
+                      <td>{!s.monitored ? <Pill>Sin vigilar</Pill> : s.lastStatus ? <Pill tone={s.lastStatus === 'up' ? 'ok' : 'bad'}>{s.lastStatus === 'up' ? 'En línea' : 'Caída'}</Pill> : <Pill>Sin datos</Pill>}</td>
+                      <td>{!s.monitored ? <span className="text-muted">—</span> : s.kumaStatus ? <Pill tone={s.kumaStatus === 'up' ? 'ok' : s.kumaStatus === 'down' ? 'bad' : 'warn'}>{KUMA_STATUS_LABEL[s.kumaStatus] ?? s.kumaStatus}{s.kumaMs != null ? ` · ${s.kumaMs} ms` : ''}</Pill> : <span className="text-muted">{s.kumaMonitorId ? 'Sin datos' : '—'}</span>}</td>
                       <td className={`num ${s.sslDaysLeft != null && s.sslDaysLeft < 15 ? 'font-semibold text-bad' : ''}`}>{s.sslDaysLeft != null ? `${s.sslDaysLeft} d` : '—'}</td>
                       <td className="num">{st.pct == null ? '—' : `${st.pct} %`}</td>
                       <td className="num">{st.ms ?? '—'}</td>
