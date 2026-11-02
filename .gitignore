@@ -24,3 +24,6 @@ storage/
 
 # planes de trabajo e informes: solo en local
 plans/
+
+# credenciales OAuth descargadas a mano (client_secret_*.json de Google Cloud Console)
+.value/
