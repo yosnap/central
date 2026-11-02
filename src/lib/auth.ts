@@ -27,6 +27,11 @@ export function checkPassword(pw: string): boolean {
   return !!real && pw.length === real.length && timingSafeEqual(Buffer.from(pw), Buffer.from(real))
 }
 
+/** Si la petición llegó por HTTPS, incluso detrás de un proxy (Dokploy) que la reenvía por HTTP. */
+export function isHttps(h: Headers): boolean {
+  return h.get('x-forwarded-proto') === 'https'
+}
+
 // Desbloqueo temporal de secretos: token distinto del de sesión (prefijo propio en la firma).
 export const UNLOCK_COOKIE = 'central_unlock'
 export const UNLOCK_MINUTES = 15
