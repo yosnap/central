@@ -106,10 +106,12 @@ function services(swarm: string[], containers: string[]): Service[] {
     const completed = rep.includes('completed')
     out.push({ name: name.slice(0, 64), kind: 'swarm', ok: r[1] === r[2] || completed, stopped: r[2] === '0' && !completed, detail: rep.trim().slice(0, 16), running: Number(r[1]), desired: Number(r[2]) })
   }
-  if (out.length) return out
+  // Junto a Swarm conviven contenedores sueltos (despliegues Compose de Dokploy): entran todos menos las tareas de un servicio («servicio.n.id»)
+  const swarmNames = new Set(out.map((s) => s.name))
   for (const l of containers) {
     const p = l.split('\t')
     if (p.length < 2 || !p[0]) continue
+    if (swarmNames.has(p[0].split('.')[0])) continue
     const endedWell = p[1] === 'exited' && (p[2] ?? '').startsWith('Exited (0)') // migraciones, builds
     out.push({ name: p[0].slice(0, 64), kind: 'container', ok: p[1] === 'running' || endedWell, stopped: false, detail: p[1].slice(0, 16), running: p[1] === 'running' ? 1 : 0, desired: 1 })
   }
