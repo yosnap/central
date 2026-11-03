@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.7 — 2026-11-03
+
+- Servidores: los proyectos desplegados con Compose (en Dokploy, junto a servicios de Swarm) vuelven a salir en la lista de servicios Docker del servidor, con su imagen y sus dominios.
+
 ## 0.4.6 — 2026-10-31
 
 - Un servicio sin «Vigilar» ya no sale como caído ni en línea con un resultado antiguo: al dejar de vigilarlo se borra su último estado (también el que ya estaba guardado).
