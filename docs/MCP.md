@@ -28,7 +28,7 @@
     "central": {
       "command": "bun",
       "args": ["/ruta/a/Central/src/mcp/server.ts"],
-      "env": { "DATABASE_URL": "postgresql://central:central@localhost:5433/central" }
+      "env": { "DATABASE_URL": "postgresql://central:central@localhost:5435/central" }
     }
   }
 }

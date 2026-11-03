@@ -28,7 +28,7 @@ Monousuario. No es un SaaS (para eso existe CRMDev; no mezclar).
 ## Comandos
 
 ```bash
-docker compose up -d     # Postgres :5433, SeaweedFS :8334, Uptime Kuma :3098
+docker compose up -d     # Postgres :5435, SeaweedFS :8334, Uptime Kuma :3098
 bun install              # ejecuta prisma generate (postinstall)
 bunx prisma migrate dev --name <cambio>   # cambios de esquema (migraciones; producción aplica migrate deploy al arrancar)
 bun run dev

@@ -1,7 +1,7 @@
 /**
  * Servidor MCP de Central (stdio). Conéctalo en Claude Desktop / Claude Code:
  *   "central": { "command": "bun", "args": ["/ruta/a/Central/src/mcp/server.ts"],
- *                "env": { "DATABASE_URL": "postgresql://central:central@localhost:5433/central" } }
+ *                "env": { "DATABASE_URL": "postgresql://central:central@localhost:5435/central" } }
  */
 import 'dotenv/config'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'

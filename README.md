@@ -56,7 +56,7 @@ variables y datos de producción) están en [CLAUDE.md](CLAUDE.md).
 "central": {
   "command": "bun",
   "args": ["/ruta/a/Central/src/mcp/server.ts"],
-  "env": { "DATABASE_URL": "postgresql://usuario:contraseña@localhost:5433/central" }
+  "env": { "DATABASE_URL": "postgresql://usuario:contraseña@localhost:5435/central" }
 }
 ```
 
