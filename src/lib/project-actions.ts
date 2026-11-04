@@ -4,12 +4,13 @@ import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { prisma } from './prisma'
 import { requireSession } from './session'
+import { PLATFORM_LABEL, TYPE_LABEL } from './format'
 
 /** Actualiza los monitores de Uptime Kuma sin esperar ni romper la acción si no está configurado. */
 const kumaInBackground = () => import('./kuma').then((k) => k.syncKuma()).catch(() => {})
 
-const TYPES = ['WEB_SITE', 'WEB_APP', 'ECOMMERCE', 'API', 'ADDON', 'PLUGIN', 'MOBILE_APP', 'DESKTOP_APP', 'BROWSER_EXTENSION', 'LIBRARY', 'SKILL', 'AUTOMATION', 'CONTENT'] as const
-const PLATFORMS = ['WORDPRESS', 'WOOCOMMERCE', 'PRESTASHOP', 'SHOPIFY', 'N8N', 'CHROME', 'ELEMENTOR', 'OTHER'] as const
+const TYPES = Object.keys(TYPE_LABEL) as [keyof typeof TYPE_LABEL, ...(keyof typeof TYPE_LABEL)[]]
+const PLATFORMS = Object.keys(PLATFORM_LABEL) as [keyof typeof PLATFORM_LABEL, ...(keyof typeof PLATFORM_LABEL)[]]
 
 const Classification = z.object({
   id: z.string(),

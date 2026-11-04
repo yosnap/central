@@ -237,8 +237,14 @@ enum ProjectType {
   MOBILE_APP
   DESKTOP_APP
   BROWSER_EXTENSION
-  LIBRARY
-  SKILL // skill de agente (Claude Code, Codex…): repositorio de skills o plugin
+  LIBRARY      // librería o paquete
+  MCP          // servidor MCP
+  CLI          // herramienta de línea de órdenes
+  SKILL        // skill de agente (Claude Code, Codex…)
+  AGENT        // agente o subagente
+  AGENT_PLUGIN // plugin o kit de agente (varias skills, órdenes, hooks)
+  TEMPLATE     // plantilla, starter o repositorio pensado para clonarlo
+  DOCS         // sitio o repositorio de documentación
   AUTOMATION
   CONTENT
 }
@@ -251,6 +257,12 @@ enum Platform {
   N8N
   CHROME
   ELEMENTOR
+  GITHUB      // GitHub Action, App o repositorio público
+  CLAUDE_CODE
+  CODEX
+  NPM
+  PYPI
+  VSCODE      // extensión de VS Code / Cursor
   OTHER
 }
 

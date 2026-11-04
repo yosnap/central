@@ -21,8 +21,8 @@ export interface ProjectForCheck {
   _count: { services: number; advisories: number }
 }
 
-/** Herramientas que se instalan (utilidades de escritorio, MCP, CLI, librerías, skills): sin dominios ni descripción obligatoria. */
-export const TOOL_TYPES: ProjectType[] = ['DESKTOP_APP', 'LIBRARY', 'SKILL']
+/** Herramientas que se instalan (utilidades de escritorio, MCP, CLI, librerías, skills, agentes, plantillas): sin dominios ni descripción obligatoria. */
+export const TOOL_TYPES: ProjectType[] = ['DESKTOP_APP', 'LIBRARY', 'MCP', 'CLI', 'SKILL', 'AGENT', 'AGENT_PLUGIN', 'TEMPLATE']
 /** Tipos que no se despliegan por sí mismos: no se les pide despliegue, hosting ni servicios. */
 export const NOT_DEPLOYED_TYPES: ProjectType[] = ['ADDON', 'PLUGIN', 'CONTENT', ...TOOL_TYPES]
 

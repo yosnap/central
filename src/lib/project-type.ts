@@ -5,8 +5,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-export type ProjectType = 'WEB_SITE' | 'WEB_APP' | 'ECOMMERCE' | 'API' | 'ADDON' | 'PLUGIN' | 'MOBILE_APP' | 'DESKTOP_APP' | 'BROWSER_EXTENSION' | 'LIBRARY' | 'SKILL' | 'AUTOMATION' | 'CONTENT'
-export type Platform = 'WORDPRESS' | 'WOOCOMMERCE' | 'PRESTASHOP' | 'SHOPIFY' | 'N8N' | 'CHROME' | 'ELEMENTOR' | 'OTHER'
+export type ProjectType = 'WEB_SITE' | 'WEB_APP' | 'ECOMMERCE' | 'API' | 'ADDON' | 'PLUGIN' | 'MOBILE_APP' | 'DESKTOP_APP' | 'BROWSER_EXTENSION' | 'LIBRARY' | 'MCP' | 'CLI' | 'SKILL' | 'AGENT' | 'AGENT_PLUGIN' | 'TEMPLATE' | 'DOCS' | 'AUTOMATION' | 'CONTENT'
+export type Platform = 'WORDPRESS' | 'WOOCOMMERCE' | 'PRESTASHOP' | 'SHOPIFY' | 'N8N' | 'CHROME' | 'ELEMENTOR' | 'GITHUB' | 'CLAUDE_CODE' | 'CODEX' | 'NPM' | 'PYPI' | 'VSCODE' | 'OTHER'
 
 type Pkg = { dependencies?: Record<string, string>; devDependencies?: Record<string, string>; keywords?: string[]; homepage?: string; bin?: unknown; n8n?: unknown }
 
@@ -67,9 +67,10 @@ export function detectType(dir: string, entries: Set<string>, pkg: Pkg | null): 
   if (has('expo', 'react-native') || entries.has('pubspec.yaml') || has('@capacitor/core')) return { type: 'MOBILE_APP' }
   if (has('electron', '@tauri-apps/api') || entries.has('src-tauri')) return { type: 'DESKTOP_APP' }
   // un servidor MCP suelto; una app web que además expone MCP sigue siendo app web
-  if (has('@modelcontextprotocol/sdk') && !has(...FRONTEND)) return { type: 'LIBRARY' }
-  // skills de agente: SKILL.md en la raíz, un plugin de Claude Code o una carpeta skills/<nombre>/SKILL.md
-  if (entries.has('SKILL.md') || entries.has('.claude-plugin') || (entries.has('skills') && hasSkill(path.join(dir, 'skills')))) return { type: 'SKILL' }
+  if (has('@modelcontextprotocol/sdk') && !has(...FRONTEND)) return { type: 'MCP' }
+  // un plugin de Claude Code (varias skills, órdenes, hooks); skills sueltas: SKILL.md en la raíz o skills/<nombre>/SKILL.md
+  if (entries.has('.claude-plugin')) return { type: 'AGENT_PLUGIN', platform: 'CLAUDE_CODE' }
+  if (entries.has('SKILL.md') || (entries.has('skills') && hasSkill(path.join(dir, 'skills')))) return { type: 'SKILL' }
 
   if (entries.has('wp-config.php') || entries.has('wp-content')) {
     const shop = fs.existsSync(path.join(dir, 'wp-content', 'plugins', 'woocommerce'))
@@ -83,7 +84,7 @@ export function detectType(dir: string, entries: Set<string>, pkg: Pkg | null): 
     const py = read(path.join(dir, entries.has('requirements.txt') ? 'requirements.txt' : 'pyproject.toml'))
     if (/\b(fastapi|flask|django)\b/i.test(py)) return { type: 'API' }
   }
-  if (pkg?.bin) return { type: 'LIBRARY' }
+  if (pkg?.bin) return { type: 'CLI' }
   return {}
 }
 
@@ -135,7 +136,7 @@ export function detectDomains(dir: string, entries: Set<string>, pkg: Pkg | null
 // Monorepos: si la raíz no aclara nada, se mira en las carpetas típicas de un nivel más abajo
 const SUBPROJECTS = ['apps', 'packages', 'frontend', 'backend', 'web', 'client', 'server', 'api', 'app', 'admin', 'mobile', 'desktop', 'extension']
 // en un monorepo con web y app móvil, lo principal suele ser la web
-const PRIORITY: ProjectType[] = ['PLUGIN', 'BROWSER_EXTENSION', 'ECOMMERCE', 'WEB_APP', 'MOBILE_APP', 'DESKTOP_APP', 'WEB_SITE', 'API', 'LIBRARY', 'SKILL']
+const PRIORITY: ProjectType[] = ['PLUGIN', 'BROWSER_EXTENSION', 'ECOMMERCE', 'WEB_APP', 'MOBILE_APP', 'DESKTOP_APP', 'WEB_SITE', 'API', 'MCP', 'CLI', 'LIBRARY', 'AGENT_PLUGIN', 'SKILL']
 
 export function subDirs(dir: string): string[] {
   const out: string[] = []

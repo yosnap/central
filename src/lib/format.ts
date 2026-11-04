@@ -22,10 +22,12 @@ export const WEB_KIND_LABEL = { CLIENT: 'Cliente', OWN: 'Propia', CENTRAL: 'Cent
 export const TYPE_LABEL = {
   WEB_SITE: 'Web corporativa / landing', WEB_APP: 'Aplicación web / SaaS', ECOMMERCE: 'E-commerce', API: 'API / backend',
   ADDON: 'Addon / módulo de un sistema', PLUGIN: 'Plugin / tema de una plataforma', MOBILE_APP: 'App móvil', DESKTOP_APP: 'App de escritorio / utilidad (Mac, Windows)',
-  BROWSER_EXTENSION: 'Extensión de navegador', LIBRARY: 'MCP / CLI / librería', SKILL: 'Skill de agente', AUTOMATION: 'Automatización', CONTENT: 'Contenido / formación',
+  BROWSER_EXTENSION: 'Extensión de navegador', LIBRARY: 'Librería / paquete', MCP: 'Servidor MCP', CLI: 'CLI / herramienta de terminal', SKILL: 'Skill de agente', AGENT: 'Agente / subagente', AGENT_PLUGIN: 'Plugin o kit de agente',
+  TEMPLATE: 'Plantilla / repositorio para clonar', DOCS: 'Documentación', AUTOMATION: 'Automatización', CONTENT: 'Contenido / formación',
 } as const
 export const PLATFORM_LABEL = {
-  WORDPRESS: 'WordPress', WOOCOMMERCE: 'WooCommerce', PRESTASHOP: 'PrestaShop', SHOPIFY: 'Shopify', N8N: 'n8n', CHROME: 'Chrome', ELEMENTOR: 'Elementor', OTHER: 'Otra',
+  WORDPRESS: 'WordPress', WOOCOMMERCE: 'WooCommerce', PRESTASHOP: 'PrestaShop', SHOPIFY: 'Shopify', N8N: 'n8n', CHROME: 'Chrome', ELEMENTOR: 'Elementor',
+  GITHUB: 'GitHub', CLAUDE_CODE: 'Claude Code', CODEX: 'Codex', NPM: 'npm', PYPI: 'PyPI', VSCODE: 'VS Code / Cursor', OTHER: 'Otra',
 } as const
 export const PURPOSE_LABEL = { DEMO: 'Demostración', SALES: 'Venta', MARKETING: 'Marketing', TUTORIAL: 'Tutorial' } as const
 export const QUOTE_STATUS_LABEL = { DRAFT: 'Borrador', SENT: 'Enviado', ACCEPTED: 'Aceptado', REJECTED: 'Rechazado', EXPIRED: 'Caducado' } as const
