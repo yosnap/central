@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.8 — 2026-11-04
+
+- Clasificación de proyectos: tipos nuevos (servidor MCP, CLI, librería o paquete, agente o subagente, plugin o kit de agente, plantilla o repositorio para clonar, documentación) y plataformas nuevas (GitHub, Claude Code, Codex, npm, PyPI, VS Code / Cursor). El escáner propone MCP, CLI y plugin de agente en lugar de «librería».
+- Webs: cada web suelta se puede editar (URL, nombre, tipo, cliente, proyecto, vigilar) y borrar con confirmación; las de un servicio enlazan a la ficha de su proyecto.
+- Repositorio: si la rama está al día con origin, el botón «Traer de origin y actualizar» pasa a «Al día con origin» y queda desactivado.
+
 ## 0.4.7 — 2026-11-03
 
 - Servidores: los proyectos desplegados con Compose (en Dokploy, junto a servicios de Swarm) vuelven a salir en la lista de servicios Docker del servidor, con su imagen y sus dominios.
