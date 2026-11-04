@@ -2,7 +2,9 @@ import { revalidatePath } from 'next/cache'
 import { prisma } from '@/lib/prisma'
 import { requireSession } from '@/lib/session'
 import { runUptime } from '@/lib/uptime'
+import Link from 'next/link'
 import { RefreshCw } from 'lucide-react'
+import { EditWebsiteButton } from '@/components/webs/edit-website-button'
 import { ActionForm, Card, Combobox, Empty, Input, PageTitle, Pill, Select, SubmitButton, Table, toOptions } from '@/components/ui'
 import { KUMA_STATUS_LABEL, WEB_KIND_LABEL, fmtDateTime } from '@/lib/format'
 
@@ -32,10 +34,11 @@ async function checkNow() {
 export default async function WebsPage() {
   await requireSession()
   const since = new Date(Date.now() - 7 * 864e5)
-  const [sites, clients] = await Promise.all([
+  const [sites, clients, projects] = await Promise.all([
     // la web de un servicio sin «Vigilar» (una API, p. ej.) no es una web que vigilar: se ve en la ficha del proyecto
-    prisma.website.findMany({ where: { OR: [{ monitored: true }, { service: null }] }, include: { client: true, project: true }, orderBy: [{ kind: 'asc' }, { url: 'asc' }] }),
+    prisma.website.findMany({ where: { OR: [{ monitored: true }, { service: null }] }, include: { client: true, project: true, service: { select: { project: { select: { id: true, name: true } } } } }, orderBy: [{ kind: 'asc' }, { url: 'asc' }] }),
     prisma.client.findMany({ select: { name: true }, orderBy: { name: 'asc' } }),
+    prisma.project.findMany({ where: { excluded: false }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
   ])
   const stats = await prisma.uptimeCheck.groupBy({ by: ['websiteId', 'up'], where: { checkedAt: { gte: since } }, _count: true, _avg: { ms: true } })
   const stat = (id: string) => {
@@ -64,7 +67,7 @@ export default async function WebsPage() {
         {groups.map(({ k, list }) => (
           <Card key={k} title={`Webs ${k === 'CLIENT' ? 'de clientes' : k === 'OWN' ? 'propias' : 'centralizadas'}`} note={`${k === 'CENTRAL' ? 'Lo compartido que no es de un proyecto: paneles de los servidores, n8n, APIs comunes. ' : ''}${list.length} webs · disponibilidad y respuesta media de los últimos 7 días`}>
             {list.length === 0 ? <Empty title="Ninguna todavía">Añádelas arriba o con <code className="font-mono">bun run websites:import</code>.</Empty> : (
-              <Table head={['Web', 'Cliente / proyecto', 'Estado', 'Uptime Kuma', 'SSL', 'Uptime 7 d', 'ms medio', 'Código', 'Última']}>
+              <Table head={['Web', 'Cliente / proyecto', 'Estado', 'Uptime Kuma', 'SSL', 'Uptime 7 d', 'ms medio', 'Código', 'Última', '']}>
                 {list.map((s) => {
                   const st = stat(s.id)
                   return (
@@ -78,6 +81,11 @@ export default async function WebsPage() {
                       <td className="num">{st.ms ?? '—'}</td>
                       <td className="num text-muted">{s.lastCode ?? '—'}</td>
                       <td className="whitespace-nowrap text-muted">{fmtDateTime(s.lastCheckedAt)}</td>
+                      <td className="text-right">
+                        {s.service?.project
+                          ? <Link href={`/proyectos/${s.service.project.id}`} className="whitespace-nowrap text-sm font-semibold text-accent-strong hover:underline" title="Es la web de un servicio: se edita en su proyecto">En {s.service.project.name}</Link>
+                          : <EditWebsiteButton site={{ id: s.id, url: s.url, label: s.label, kind: s.kind, monitored: s.monitored, clientName: s.client?.name ?? null, projectId: s.projectId }} clients={clients.map((c) => c.name)} projects={projects} />}
+                      </td>
                     </tr>
                   )
                 })}
