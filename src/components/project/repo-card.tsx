@@ -2,7 +2,7 @@ import { CircleAlert, CircleCheck, CircleDashed, ExternalLink, RefreshCw } from 
 import type { Project, RepoRemote } from '@/generated/prisma/client'
 import { saveRepo } from '@/lib/project-actions'
 import { refreshRepo } from '@/lib/repo-actions'
-import { ActionForm, Card, Field, Input, Notice, Pill, SubmitButton, Table, Tooltip, cn } from '@/components/ui'
+import { ActionForm, Button, Card, Field, Input, Notice, Pill, SubmitButton, Table, Tooltip, cn } from '@/components/ui'
 import { ago, fmtDateTime } from '@/lib/format'
 import { isOwnRemote } from '@/lib/scanner'
 
@@ -37,6 +37,8 @@ export function RepoCard({ p, remotes }: { p: Project; remotes: RepoRemote[] }) 
     .filter((b) => b.ahead || b.behind || b.name === p.defaultBranch)
     .sort((a, b) => b.ahead + b.behind - (a.ahead + a.behind))
   const stale = p.lastFetchAt && Date.now() - p.lastFetchAt.getTime() > 7 * 864e5
+  // al día en la última comprobación (reciente y sin error): no hay nada que traer, el botón solo confundiría
+  const upToDate = !!p.lastFetchAt && !stale && !p.fetchError && !p.aheadTotal && !p.behindTotal
   const origin = remotes.find((r) => r.name === 'origin') ?? remotes[0]
   const thirdParty = origin ? !isOwnRemote(origin.path ? `${origin.host}/${origin.path}` : origin.url) : false
   return (
@@ -45,10 +47,16 @@ export function RepoCard({ p, remotes }: { p: Project; remotes: RepoRemote[] }) 
       note="Lo que hay en el disco frente a lo que hay en el remoto, y lo que dice el proveedor."
       className="xl:col-span-2"
       action={remotes.length > 0 && (
-        <ActionForm action={refreshRepo} success="Repositorio actualizado">
-          <input type="hidden" name="id" value={p.id} />
-          <SubmitButton variant="secondary" size="sm" pendingText="Actualizando…"><RefreshCw className="size-4" aria-hidden />Traer de origin y actualizar</SubmitButton>
-        </ActionForm>
+        upToDate ? (
+          <Tooltip content={`Al día con origin en la última comprobación (${ago(p.lastFetchAt!)}). El escaneo programado vuelve a mirarlo solo.`}>
+            <span tabIndex={0}><Button variant="secondary" size="sm" disabled><CircleCheck className="size-4" aria-hidden />Al día con origin</Button></span>
+          </Tooltip>
+        ) : (
+          <ActionForm action={refreshRepo} success="Repositorio actualizado">
+            <input type="hidden" name="id" value={p.id} />
+            <SubmitButton variant="secondary" size="sm" pendingText="Actualizando…"><RefreshCw className="size-4" aria-hidden />Traer de origin y actualizar</SubmitButton>
+          </ActionForm>
+        )
       )}
     >
       {remotes.length === 0 && (
