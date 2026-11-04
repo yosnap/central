@@ -24,7 +24,7 @@ export async function GoogleCard({ result, account, reason, origin }: { result?:
     <section id="google">
       <Card title="Google: correo y agenda" className="xl:col-span-2"
         note="Gmail en solo lectura (buscar y guardar mensajes importantes) y Google Calendar (ver y crear eventos). Puedes conectar varias cuentas: Sn4p, iServisat, Codeia… Los permisos se guardan cifrados."
-        action={app && <ButtonLink href="/api/google/connect"><Plus className="size-5" aria-hidden />Conectar cuenta</ButtonLink>}>
+        action={app && <ButtonLink href="/api/google/connect" target="_blank" rel="noopener noreferrer"><Plus className="size-5" aria-hidden />Conectar cuenta</ButtonLink>}>
         {r && <Notice tone={r.tone} title={r.title} className="mb-5">{result === 'ok' ? `${account} ya está en Central. Elige abajo qué calendarios quieres ver en la agenda.` : reason}</Notice>}
 
         {accounts.length > 0 && (
@@ -37,7 +37,7 @@ export async function GoogleCard({ result, account, reason, origin }: { result?:
                     <span className="text-lg font-semibold">{a.account}</span>
                     {a.lastError ? <Pill tone="bad">{a.lastError}</Pill> : <Pill tone="ok">Conectada{a.lastOkAt ? ` · ${fmtDateTime(a.lastOkAt)}` : ''}</Pill>}
                     <div className="ml-auto flex gap-2">
-                      {a.lastError && <ButtonLink href={`/api/google/connect?cuenta=${encodeURIComponent(a.account ?? '')}`} variant="secondary" size="sm">Volver a conectar</ButtonLink>}
+                      {a.lastError && <ButtonLink href={`/api/google/connect?cuenta=${encodeURIComponent(a.account ?? '')}`} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">Volver a conectar</ButtonLink>}
                       <ActionForm action={refreshCalendars} success="Calendarios actualizados"><input type="hidden" name="id" value={a.id} /><SubmitButton variant="ghost" size="sm" pendingText="Leyendo…"><RefreshCw className="size-4" aria-hidden />Releer calendarios</SubmitButton></ActionForm>
                       <ConfirmAction action={disconnectGoogle} fields={{ id: a.id }} title={`Quitar ${a.account}`} confirmLabel="Quitar cuenta" success="Cuenta quitada"
                         description="Central deja de leer su correo y su agenda. Los mensajes guardados se conservan. En Google no se toca nada; si quieres, retira también el acceso en myaccount.google.com › Seguridad.">Quitar</ConfirmAction>
