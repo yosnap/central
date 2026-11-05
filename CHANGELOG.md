@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.15 — 2026-11-05
+
+- Ajustes › Repositorios: varios tokens por servidor, cada uno con su cuenta u organización y un nombre (tu cuenta, la asociación, una agencia, un cliente) y también servidores propios de GitLab o Gitea. Cada repositorio se consulta con el token de su dueño; si no hay, con el general de ese servidor.
+
 ## 0.4.14 — 2026-11-05
 
 - Ajustes › Repositorios: el proveedor sale en GitHub por defecto y el servidor puede ir vacío (github.com o gitlab.com) o con la URL completa (https://github.com/…); si algo no vale, avisa en lugar de dar un error 500.
