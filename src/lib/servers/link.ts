@@ -6,8 +6,9 @@
 import { prisma } from '../prisma'
 import { hostOf, matchContainers } from './match'
 import { refreshServiceVersion } from '../deploy-version'
-import { ROLE_LABEL } from './role'
+import { ROLE_LABEL, isThirdPartyRole } from './role'
 import { isApiService, serviceSiteLabel } from '../website-label'
+import { techOf } from '../brands'
 
 /** Opciones para elegir proyecto: cada servicio existente y, por proyecto, «nuevo servicio». */
 export async function linkOptions() {
@@ -26,7 +27,7 @@ export async function linkOptions() {
   ]
 }
 
-const SERVICE_NAME: Record<string, string> = { database: 'base de datos', cache: 'caché', queue: 'cola', automation: 'n8n', storage: 'almacenamiento' }
+const SERVICE_NAME: Record<string, string> = { worker: 'worker', scheduler: 'programador', mcp: 'mcp', agent: 'agente', tool: 'herramienta', database: 'base de datos', cache: 'caché', queue: 'cola', automation: 'n8n', storage: 'almacenamiento' }
 
 /** Pruebas si el dominio lo dice (staging., dev., test., preview., qa.); si no, producción. */
 export const envFromDomain = (d: string | undefined) => (d && /(^|[.-])(staging|stage|stg|dev|test|preview|qa|pre)[.-]/.test(d) ? 'staging' : 'production')
@@ -48,13 +49,15 @@ export async function linkContainer(containerId: string, target: string, environ
   } else if (target.startsWith('prj:')) {
     const project = await prisma.project.findUniqueOrThrow({ where: { id: target.slice(4) }, include: { services: true } })
     const hosts = new Set(c.domains)
-    const name = c.role && c.role !== 'app' && c.role !== 'other' ? SERVICE_NAME[c.role] ?? ROLE_LABEL[c.role].toLowerCase() : isApiService(c.name) ? 'api' : 'web'
+    // una herramienta o un agente se llaman como el producto («postiz», «hermes»); el resto, por su papel
+    const product = isThirdPartyRole(c.role) ? techOf(c.image, c.name)?.label.toLowerCase() : undefined
+    const name = product ?? (c.role && c.role !== 'app' && c.role !== 'other' ? SERVICE_NAME[c.role] ?? ROLE_LABEL[c.role]?.toLowerCase() ?? c.role : isApiService(c.name) ? 'api' : 'web')
     const env = environment ?? envFromDomain(c.domains[0])
     const existing = project.services.find((s) => s.url && hosts.has(hostOf(s.url) ?? '')) ?? project.services.find((s) => s.name === name && s.environment === env && !s.serverId)
     if (existing) serviceId = existing.id
     else {
       // solo las webs se vigilan por su dominio; el de un visor de base de datos no es la web del proyecto
-      const url = (name === 'web' || name === 'api') && c.domains[0] ? `https://${c.domains[0]}` : null
+      const url = (name === 'web' || name === 'api' || isThirdPartyRole(c.role)) && c.domains[0] ? `https://${c.domains[0]}` : null
       // con dominio, se vigila como cualquier servicio con URL (Webs y Uptime Kuma)
       const site = url ? await prisma.website.upsert({
         where: { url },
@@ -70,7 +73,7 @@ export async function linkContainer(containerId: string, target: string, environ
     }
   } else throw new Error('Destino no válido')
   // una web enlazada a un servicio sin URL le da su dominio
-  const isWeb = !c.role || c.role === 'app' || c.role === 'other'
+  const isWeb = !c.role || c.role === 'app' || c.role === 'other' || isThirdPartyRole(c.role)
   if (isWeb && c.domains[0]) {
     const svc = await prisma.projectService.findUniqueOrThrow({ where: { id: serviceId }, select: { url: true } })
     if (!svc.url) await prisma.projectService.update({ where: { id: serviceId }, data: { url: `https://${c.domains[0]}`, monitor: true } })

@@ -50,6 +50,21 @@ export const brandOptions = (list: Brand[]) => list.map((x) => ({ value: x.key, 
 
 /** Tecnologías que corren en un contenedor (bases de datos, almacenamiento, automatización…), por orden de prioridad. */
 const TECH: { re: RegExp; brand: Brand }[] = [
+  // agentes y herramientas que se instalan para un proyecto (sin logo en simple-icons: se muestran con sus iniciales)
+  { re: /hermes-agent|nousresearch\/hermes|(^|[_.-])hermes([_.-]|\d|$)/, brand: b('hermes', 'Hermes') },
+  { re: /openclaw/, brand: b('openclaw', 'OpenClaw') },
+  { re: /paperclip/, brand: b('paperclip', 'Paperclip') },
+  { re: /flowise/, brand: b('flowise', 'Flowise') },
+  { re: /langflow/, brand: b('langflow', 'Langflow') },
+  { re: /dify/, brand: b('dify', 'Dify') },
+  { re: /open-webui/, brand: b('openwebui', 'Open WebUI') },
+  { re: /postiz/, brand: b('postiz', 'Postiz') },
+  { re: /listmonk/, brand: b('listmonk', 'Listmonk') },
+  { re: /chatwoot/, brand: b('chatwoot', 'Chatwoot') },
+  { re: /calcom|cal\.com/, brand: b('calcom', 'Cal.com') },
+  { re: /metabase/, brand: b('metabase', 'Metabase') },
+  { re: /mautic/, brand: b('mautic', 'Mautic') },
+  { re: /documenso/, brand: b('documenso', 'Documenso') },
   { re: /postgres|postgis|pgvector|timescale/, brand: b('postgresql', 'PostgreSQL', siPostgresql) },
   { re: /mariadb/, brand: b('mariadb', 'MariaDB', siMariadb) },
   { re: /mysql/, brand: b('mysql', 'MySQL', siMysql) },

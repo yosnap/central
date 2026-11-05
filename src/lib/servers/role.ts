@@ -1,11 +1,21 @@
 /** Qué es un servicio Docker, deducido de su imagen (o, sin ella, de su nombre). */
 
 export const ROLE_LABEL: Record<string, string> = {
-  app: 'Aplicación', database: 'Base de datos', cache: 'Caché', proxy: 'Proxy', queue: 'Cola', automation: 'Automatización',
+  app: 'Aplicación', worker: 'Worker', scheduler: 'Programador', mcp: 'Servidor MCP', agent: 'Agente IA', tool: 'Herramienta',
+  database: 'Base de datos', cache: 'Caché', proxy: 'Proxy', queue: 'Cola', automation: 'Automatización',
   storage: 'Almacenamiento', monitoring: 'Vigilancia', panel: 'Panel', other: 'Otro',
 }
 
+/** Código del propio proyecto (la web y sus procesos: worker, programador, MCP), aunque no se vea por su dominio. */
+export const isCodeRole = (role: string | null | undefined) => !role || ['app', 'other', 'worker', 'scheduler', 'mcp'].includes(role)
+
+/** Aplicaciones de terceros instaladas para un proyecto (no son código propio): agentes y herramientas. */
+export const isThirdPartyRole = (role: string | null | undefined) => role === 'agent' || role === 'tool'
+
 const RULES: [string, RegExp][] = [
+  // por la imagen, antes que nada: un agente o una herramienta pueden traer «postgres» o «worker» en el nombre
+  ['agent', /hermes-agent|nousresearch\/hermes|openclaw|paperclip|flowise|langflow|langgenius\/dify|\bdify-|open-webui|librechat|anythingllm/],
+  ['tool', /postiz|plausible|umami|listmonk|chatwoot|calcom|cal\.com|metabase|mautic|documenso|twenty(crm|hq)|formbricks|typebot|rallly|mattermost|outline|gitea|vaultwarden|matomo/],
   ['database', /pgweb|adminer|phpmyadmin|pgadmin|postgres|postgis|mysql|mariadb|mongo|clickhouse|cockroach|timescale|supabase\/postgres|pgvector|couchdb|neo4j|qdrant|weaviate|meilisearch|elasticsearch|opensearch|typesense/],
   ['cache', /redis|valkey|memcached|dragonfly|keydb/],
   ['queue', /rabbitmq|kafka|nats|redpanda|mosquitto|emqx/],
@@ -27,6 +37,12 @@ export function roleOf(image: string | null | undefined, name: string): string {
   const own = image && /^easypanel\/[^/]+\/[^/]+/.test(image) ? null : image
   const text = `${own ?? ''} ${name}`.toLowerCase()
   for (const [role, re] of RULES) if (re.test(text)) return role
+  // procesos de la propia aplicación, por el nombre del servicio («bloom_web-worker», «app-scheduler», «proyecto-mcp»)
+  const n = name.toLowerCase()
+  if (/(^|[_.-])(worker|workers|jobs|consumer)([_.-]|\d|$)|celery|sidekiq|bullmq|horizon/.test(text)) return 'worker'
+  if (/(^|[_.-])(scheduler|cron|crontab|beat|programador)([_.-]|\d|$)|ofelia/.test(n)) return 'scheduler'
+  if (/(^|[_.-])mcp([_.-]|\d|$)/.test(n)) return 'mcp'
+  if (/(^|[_.-])hermes([_.-]|\d|$)/.test(n)) return 'agent'
   // por el nombre: «proyecto_db», «proyecto-redis-1»…
   if (/(^|[_.-])(db|database|pg)([_.-]|\d|$)/.test(name.toLowerCase())) return 'database'
   return image || /[_-](web|app|api|front|backend)/.test(name.toLowerCase()) ? 'app' : 'other'

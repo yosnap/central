@@ -5,6 +5,7 @@
 import { decryptJson, encryptJson } from './crypto'
 import { formatEnv, parseEnv, type EnvEntry } from './env-file'
 import { prisma } from './prisma'
+import { isCodeRole } from './servers/role'
 
 export type BackupSource = 'import' | 'restore' | 'manual' | 'server'
 /** Entornos desplegados que se copian a diario desde sus contenedores. */
@@ -34,8 +35,7 @@ export async function envTargets(projectId: string, environment: string): Promis
     where: { projectService: { projectId, environment } },
     select: { name: true, kind: true, role: true, server: { select: { host: true, sshPort: true, adminUser: true, hostKey: true } } },
   })
-  const isApp = (r: string | null) => !r || r === 'app' || r === 'other'
-  rows.sort((a, b) => Number(isApp(b.role)) - Number(isApp(a.role)))
+  rows.sort((a, b) => Number(isCodeRole(b.role)) - Number(isCodeRole(a.role)))
   return rows.map((r) => ({ ...r.server, name: r.name, kind: r.kind }))
 }
 

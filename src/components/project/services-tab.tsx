@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Box, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { addFromContainerAction, addServiceAction, deleteServiceAction, reorderServicesAction, updateServiceField } from '@/lib/service-actions'
-import { ROLE_LABEL, roleOf } from '@/lib/servers/role'
+import { ROLE_LABEL, isCodeRole, roleOf } from '@/lib/servers/role'
 import { PLATFORMS, frameworkOf, techOf } from '@/lib/brands'
 import { BrandLogo } from '@/components/brand-logo'
 import { SortableList } from './sortable-list'
@@ -16,7 +16,7 @@ export type TabService = {
 }
 export type Loose = { id: string; name: string; image: string | null; role: string | null; domains: string[]; server: { name: string } }
 
-const SERVICE_NAMES = ['web', 'api', 'admin', 'tienda', 'n8n', 'base de datos', 'caché', 'almacenamiento', 'correo'].map((v) => ({ value: v, label: v }))
+const SERVICE_NAMES = ['web', 'api', 'admin', 'tienda', 'worker', 'programador', 'mcp', 'agente', 'herramienta', 'n8n', 'base de datos', 'caché', 'almacenamiento', 'correo'].map((v) => ({ value: v, label: v }))
 
 /** Pestaña de Pruebas o Producción: los servicios del entorno, editables uno a uno, y cómo añadir más. */
 export function ServicesTab({ projectId, environment, framework, services, servers, containerOptions, suggested }: {
@@ -32,7 +32,7 @@ export function ServicesTab({ projectId, environment, framework, services, serve
         const status = s.website?.kumaStatus ?? s.website?.lastStatus
         const c = s.containers[0]
         const role = c ? ROLE_LABEL[c.role ?? roleOf(c.image, c.name)] : null
-        const isApp = !c || ['app', 'other'].includes(c.role ?? roleOf(c.image, c.name))
+        const isApp = !c || isCodeRole(c.role ?? roleOf(c.image, c.name))
         const tech = (c ? techOf(c.image, c.name) : null) ?? (isApp ? appBrand : null)
         return { id: s.id, label: s.name, node: (
           <article className="rounded-2xl border border-line p-5">

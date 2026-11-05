@@ -7,6 +7,7 @@
  */
 import { fetchVersion } from './live-version'
 import { prisma } from './prisma'
+import { isCodeRole, isThirdPartyRole } from './servers/role'
 
 const CANDIDATE_PATHS = ['/api/version', '/version', '/api/health', '/health', '/version.json', '/api/status']
 const PROBE_EVERY_MS = 24 * 3_600_000
@@ -44,8 +45,8 @@ export async function refreshServiceVersion(serviceId: string, { force = false }
       if (found) ({ path: versionPath, version } = found)
     }
   }
-  // solo la versión de la aplicación: la de una base de datos o su visor (postgres:17, pgweb:0.16.2) no es la del proyecto
-  const apps = s.containers.filter((c) => !c.role || c.role === 'app' || c.role === 'other')
+  // solo la versión de la aplicación (o de la herramienta instalada): la de una base de datos o su visor (postgres:17, pgweb:0.16.2) no es la del servicio
+  const apps = s.containers.filter((c) => isCodeRole(c.role) || isThirdPartyRole(c.role))
   version ??= apps.map((c) => c.version ?? versionFromImage(c.image)).find(Boolean) ?? null
   const now = new Date()
   // también cuando no hay versión: así la búsqueda de ruta no se repite cada 10 minutos

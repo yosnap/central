@@ -3,7 +3,7 @@
  * y qué contenedor o servicio Docker le corresponde (por nombre). Lo que se empareja a mano no se toca.
  */
 import { prisma } from '../prisma'
-import { isInfra } from './role'
+import { isInfra, isCodeRole } from './role'
 
 const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[^a-z0-9]/g, '')
 export const hostOf = (url: string) => { try { return new URL(/^https?:\/\//.test(url) ? url : `https://${url}`).hostname.toLowerCase() } catch { return null } }
@@ -51,7 +51,7 @@ export async function matchContainers(serverId: string) {
       if (host && c.domains.includes(host)) score += 5 // su proxy sirve el dominio del servicio
       if (project.length >= 3 && name.includes(project)) score += 2
       else if (slugTail.length >= 3 && name.includes(slugTail)) score += 2
-      if (score < 5 && c.role && c.role !== 'app' && c.role !== 'other' && !/^(db|database|redis|cache)/.test(service)) score -= 1 // una web no es su base de datos
+      if (score < 5 && !isCodeRole(c.role) && !/^(db|database|redis|cache)/.test(service)) score -= 1 // una web no es su base de datos
       if (score && service.length >= 2 && name.includes(service)) score += 1
       if (score < 2) continue
       if (!best || score > best.score) { best = { id: c.id, score }; tie = false }
