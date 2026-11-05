@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.14 — 2026-11-05
+
+- Ajustes › Repositorios: el proveedor sale en GitHub por defecto y el servidor puede ir vacío (github.com o gitlab.com) o con la URL completa (https://github.com/…); si algo no vale, avisa en lugar de dar un error 500.
+
 ## 0.4.13 — 2026-11-05
 
 - Servicios: cada nombre sugerido explica debajo, en letra pequeña, qué va en él (agente: Hermes, OpenClaw…; herramienta: Postiz, Plausible…; base de datos: PostgreSQL, MySQL…; caché, almacenamiento, correo…).
