@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.12 — 2026-11-05
+
+- Servicios: tipos nuevos para los servicios Docker: worker, programador (cron), servidor MCP, agente IA (Hermes, OpenClaw, Paperclip, Flowise, Dify…) y herramienta de terceros (Postiz, Plausible, Umami, Listmonk, Chatwoot, Cal.com, Metabase…). Al enlazarlos a un proyecto se llaman como su papel o su producto, y las herramientas y agentes con dominio se vigilan y muestran su versión.
+- El nombre de un servicio sugiere también worker, programador, mcp, agente y herramienta.
+
 ## 0.4.11 — 2026-11-05
 
 - Repositorio: una rama local creada desde origin/develop u origin/main (git la deja siguiendo a esa rama) ya no sale «por bajar» con todo lo que develop avanzó después. Si no tiene commits propios, aparece en «Ramas locales ya fusionadas (se pueden borrar)».
