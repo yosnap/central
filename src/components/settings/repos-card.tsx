@@ -56,8 +56,8 @@ export async function ReposCard() {
       )}
 
       <ActionForm action={addRepoToken} success="Token guardado y repositorios consultados" className="mt-5 grid gap-3 md:grid-cols-[minmax(10rem,1fr)_2fr_2fr_auto]">
-        <Select name="provider" aria-label="Proveedor" defaultValue="GITLAB" options={PROVIDERS} />
-        <Input name="host" aria-label="Servidor" placeholder="gitlab.com, git.miempresa.com…" required className="font-mono" />
+        <Select name="provider" aria-label="Proveedor" defaultValue="GITHUB" options={PROVIDERS} />
+        <Input name="host" aria-label="Servidor" placeholder="Vacío: github.com o gitlab.com · o git.miempresa.com" className="font-mono" />
         <Input name="token" type="password" aria-label="Token" placeholder="Token de acceso (solo lectura basta)" required autoComplete="off" />
         <SubmitButton pendingText="Guardando…">Añadir token</SubmitButton>
       </ActionForm>

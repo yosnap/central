@@ -39,16 +39,22 @@ export async function syncAllRepos() {
   revalidatePath('/', 'layout')
 }
 
+const DEFAULT_HOST = { GITHUB: 'github.com', GITLAB: 'gitlab.com', GITEA: '' } as const
+// «https://github.com/», «GitHub.com/yosnap» o vacío (el del proveedor) → «github.com»
+const hostOf = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/^[a-z]+:\/\//, '').replace(/[/?#].*$/, '').replace(/^www\./, '')
 const TokenForm = z.object({
   provider: z.enum(['GITHUB', 'GITLAB', 'GITEA']),
-  host: z.string().trim().toLowerCase().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/),
-  token: z.string().trim().min(8).max(500),
+  host: z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}(:\d+)?$/, 'Servidor no válido: escribe solo el dominio, por ejemplo github.com o git.miempresa.com'),
+  token: z.string().trim().min(8, 'Pega el token completo').max(500, 'Ese token es demasiado largo'),
 })
 
 /** Token de acceso a la API de un proveedor (GitHub, GitLab o Gitea, también autoalojados). Se guarda cifrado. */
 export async function addRepoToken(form: FormData) {
   await requireSession()
-  const d = TokenForm.parse(Object.fromEntries(form))
+  const provider = form.get('provider') as keyof typeof DEFAULT_HOST
+  const r = TokenForm.safeParse({ ...Object.fromEntries(form), host: hostOf(form.get('host')) || DEFAULT_HOST[provider] })
+  if (!r.success) return { error: r.error.issues.map((i) => i.message).join('. ') }
+  const d = r.data
   const baseUrl = `https://${d.host}`
   const existing = await prisma.integrationConnection.findFirst({ where: { provider: d.provider, baseUrl } })
   const data = { provider: d.provider, label: d.host, baseUrl, secret: encryptJson({ token: d.token }), lastError: null }
