@@ -38,8 +38,11 @@ export function InstallButton({ id, host, user, remote = false, label = 'Instala
         <SubmitButton className="justify-self-start" pendingText={remote ? 'Pidiendo…' : 'Instalando…'}>{remote ? 'Pedir al Mac' : 'Instalar'}</SubmitButton>
       </ActionForm>
       <section className="mt-6 rounded-2xl border border-line bg-ground p-4">
-        <h3 className="flex items-center gap-2 font-semibold"><KeyRound className="size-5" aria-hidden />¿El servidor solo acepta claves?</h3>
-        <p className="mt-1 text-sm text-muted">Añade esta clave de Central{remote ? ' (la del Mac)' : ''} en el panel de tu proveedor (en su lista de claves SSH), espera unos segundos y pulsa «{remote ? 'Pedir al Mac' : 'Instalar'}»{remote ? '' : ' sin contraseña'}. Al terminar puedes quitarla del panel: Central lee el servidor con infobar.</p>
+        <h3 className="flex items-center gap-2 font-semibold"><KeyRound className="size-5" aria-hidden />¿El {remote ? 'Mac' : 'equipo'} no entra en el servidor?</h3>
+        <ol className="mt-1 grid list-decimal gap-1 pl-5 text-sm text-muted">
+          <li>Lo más directo: añade esta clave de Central en la lista de claves SSH de tu proveedor y pulsa «{remote ? 'Pedir al Mac' : 'Instalar'}»{remote ? '' : ' sin contraseña'}. Guárdala allí como clave por defecto y márcala al crear cada servidor: así la instalación sale a la primera.</li>
+          <li>Si el proveedor te dio su propia clave privada, guárdala en <code>~/.ssh</code> del Mac. Si tiene frase de paso, guárdala en el Llavero desde la app Terminal con <code>ssh-add --apple-use-keychain ~/.ssh/&lt;clave&gt;</code>.</li>
+        </ol>
         {pub ? (
           <div className="mt-3 flex items-start gap-2">
             <code className="min-w-0 flex-1 break-all rounded-lg bg-panel px-3 py-2 text-sm">{pub}</code>
