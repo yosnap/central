@@ -105,9 +105,9 @@ export async function addScanRoot(form: FormData) {
   const fs = await import('node:fs')
   const path = await import('node:path')
   const input = RootForm.parse(Object.fromEntries(form)).path
-  if (!path.isAbsolute(input)) throw new Error('La ruta tiene que ser absoluta')
+  if (!path.isAbsolute(input)) return { error: 'La ruta tiene que ser absoluta' }
   const dir = path.resolve(input)
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('La carpeta no existe en este equipo')
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return { error: 'La carpeta no existe en este equipo' }
   const { scanAndImport } = await import('./scan-import')
   await scanAndImport([dir])
   revalidatePath('/', 'layout')
