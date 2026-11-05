@@ -6,7 +6,7 @@ import { ActionForm, Button, Card, Field, Input, Notice, Pill, SubmitButton, Tab
 import { ago, fmtDateTime } from '@/lib/format'
 import { isOwnRemote } from '@/lib/scanner'
 
-type Branch = { name: string; upstream: string | null; ahead: number; behind: number; gone?: boolean; implicit?: boolean }
+type Branch = { name: string; upstream: string | null; ahead: number; behind: number; gone?: boolean; implicit?: boolean; mergedInto?: string }
 const PROVIDER = { GITHUB: 'GitHub', GITLAB: 'GitLab', GITEA: 'Gitea', OTHER: 'Otro' } as const
 const webUrl = (r: RepoRemote) => (r.path && r.provider !== 'OTHER' ? `https://${r.host}/${r.path}` : r.url.replace(/\.git$/, ''))
 
@@ -126,6 +126,7 @@ export function RepoCard({ p, remotes }: { p: Project; remotes: RepoRemote[] }) 
         <div className="mt-5 flex flex-col gap-3">
           <Chips title="Ramas locales sin subir" items={p.localOnlyBranches} tone="warn" />
           <Chips title="Ramas remotas sin copia local" items={p.remoteOnlyBranches} tone="muted" />
+          <Chips title="Ramas locales ya fusionadas (se pueden borrar)" items={all.filter((b) => b.mergedInto).map((b) => b.name)} tone="muted" />
         </div>
       )}
 

@@ -8,7 +8,8 @@ import path from 'node:path'
 
 export type RepoProvider = 'GITHUB' | 'GITLAB' | 'GITEA' | 'OTHER'
 export type GitRemote = { name: string; url: string; provider: RepoProvider; host: string; path: string | null }
-export type BranchInfo = { name: string; upstream: string | null; ahead: number; behind: number; gone?: boolean; implicit?: boolean }
+/** `mergedInto`: rama local que sigue a otra con distinto nombre (creada desde origin/develop) y ya está entera dentro de ella. */
+export type BranchInfo = { name: string; upstream: string | null; ahead: number; behind: number; gone?: boolean; implicit?: boolean; mergedInto?: string }
 export type BranchState = { branches: BranchInfo[]; localOnly: string[]; remoteOnly: string[]; stash: number; aheadTotal: number; behindTotal: number; behindAuthors: string[]; rewritten: number; lastFetchAt?: Date }
 
 // Sin preguntas: ni usuario/contraseña ni passphrase de SSH. Si hace falta, falla y se anota.
@@ -73,6 +74,14 @@ export function readBranchState(dir: string): BranchState {
     if (!same) continue
     const [ahead, behind] = git(dir, ['rev-list', '--left-right', '--count', `${b.name}...${same}`]).split(/\s+/).map(Number)
     Object.assign(b, { upstream: same, ahead: ahead || 0, behind: behind || 0, implicit: true })
+  }
+  // rama creada desde otra remota (git checkout -b x origin/develop): git la deja siguiendo a develop y la cuenta
+  // «por detrás» con todo lo que develop avanza después. No es nada por bajar: si no tiene commits propios, ya está fusionada.
+  const head = git(dir, ['rev-parse', '--abbrev-ref', 'HEAD'])
+  for (const b of branches) {
+    if (!b.upstream || b.implicit || b.gone || b.name === head || b.upstream.slice(b.upstream.indexOf('/') + 1) === b.name) continue
+    if (!b.ahead) b.mergedInto = b.upstream
+    b.behind = 0
   }
   const tracked = new Set(branches.map((b) => b.upstream).filter(Boolean))
   const remoteOnly = [...remotes].filter((r) => !r.endsWith('/HEAD') && r.includes('/') && !tracked.has(r))
