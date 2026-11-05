@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.13 — 2026-11-05
+
+- Servicios: cada nombre sugerido explica debajo, en letra pequeña, qué va en él (agente: Hermes, OpenClaw…; herramienta: Postiz, Plausible…; base de datos: PostgreSQL, MySQL…; caché, almacenamiento, correo…).
+
 ## 0.4.12 — 2026-11-05
 
 - Servicios: tipos nuevos para los servicios Docker: worker, programador (cron), servidor MCP, agente IA (Hermes, OpenClaw, Paperclip, Flowise, Dify…) y herramienta de terceros (Postiz, Plausible, Umami, Listmonk, Chatwoot, Cal.com, Metabase…). Al enlazarlos a un proyecto se llaman como su papel o su producto, y las herramientas y agentes con dominio se vigilan y muestran su versión.
