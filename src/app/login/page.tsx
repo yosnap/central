@@ -1,14 +1,14 @@
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { SESSION_COOKIE, checkPassword, signSession } from '@/lib/auth'
+import { SESSION_COOKIE, checkPassword, isHttps, signSession } from '@/lib/auth'
 import { Field, Input, Notice, SubmitButton } from '@/components/ui'
 
 async function login(form: FormData) {
   'use server'
   const pw = String(form.get('password') ?? '')
   if (!checkPassword(pw)) redirect('/login?error=1')
-  const c = await cookies()
-  c.set(SESSION_COOKIE, signSession(), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 30 * 86400 })
+  const [c, h] = await Promise.all([cookies(), headers()])
+  c.set(SESSION_COOKIE, signSession(), { httpOnly: true, sameSite: 'lax', secure: isHttps(h), path: '/', maxAge: 30 * 86400 })
   redirect('/')
 }
 

@@ -96,7 +96,7 @@ export async function scanNow() {
   revalidatePath('/', 'layout')
 }
 
-const RootForm = z.object({ path: z.string().trim().min(2).max(500).regex(/^\//) })
+const RootForm = z.object({ path: z.string().trim().min(2).max(500) })
 
 /** Añade una carpeta raíz y la escanea en el momento. Tiene que existir en este equipo. */
 export async function addScanRoot(form: FormData) {
@@ -104,8 +104,10 @@ export async function addScanRoot(form: FormData) {
   if ((await import('./worker')).isRemote()) return { error: 'En producción, las carpetas que se escanean se eligen en el Mac (CENTRAL_WORKER_ROOTS del trabajador)' }
   const fs = await import('node:fs')
   const path = await import('node:path')
-  const dir = path.resolve(RootForm.parse(Object.fromEntries(form)).path)
-  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) throw new Error('La carpeta no existe en este equipo')
+  const input = RootForm.parse(Object.fromEntries(form)).path
+  if (!path.isAbsolute(input)) return { error: 'La ruta tiene que ser absoluta' }
+  const dir = path.resolve(input)
+  if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return { error: 'La carpeta no existe en este equipo' }
   const { scanAndImport } = await import('./scan-import')
   await scanAndImport([dir])
   revalidatePath('/', 'layout')
