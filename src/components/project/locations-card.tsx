@@ -1,5 +1,6 @@
-import { ActionForm, Card, ConfirmAction, Notice, Pill, SubmitButton, Table, Tooltip } from '@/components/ui'
-import { pruneWorktreesAction, removeWorktreeAction } from '@/lib/worktree-actions'
+import { ActionForm, Card, Notice, Pill, SubmitButton, Table, Tooltip } from '@/components/ui'
+import { pruneWorktreesAction } from '@/lib/worktree-actions'
+import { RemoveWorktreeButton } from './remove-worktree-button'
 import { ago, fmtDate } from '@/lib/format'
 
 type Location = {
@@ -43,7 +44,7 @@ export function LocationsCard({ projectId, locations }: { projectId: string; loc
           )}
           {removable.length > 0 && (
             <Notice tone="info" title={`${removable.length} ${removable.length === 1 ? 'worktree se puede borrar' : 'worktrees se pueden borrar'}`}>
-              Su rama ya está fusionada en la del principal y no tienen cambios sin commit. Bórralos con «Borrar» en su fila cuando no los necesites: la rama se queda.
+              Su rama ya está fusionada en la del principal y no tienen cambios sin commit. Bórralos con «Borrar» en su fila cuando no los necesites; ahí eliges si también se borra su rama local y la de GitHub.
             </Notice>
           )}
         </div>
@@ -59,10 +60,7 @@ export function LocationsCard({ projectId, locations }: { projectId: string; loc
             <td className="whitespace-nowrap"><State l={l} /></td>
             <td className="whitespace-nowrap text-muted">{fmtDate(l.modifiedAt)}</td>
             <td className="text-right">{removable.includes(l) && (
-              <ConfirmAction action={removeWorktreeAction} fields={{ id: l.id }} title="Borrar este worktree" confirmLabel="Borrar" success="Worktree borrado (o pedido al Mac)"
-                description={<>Se borra la carpeta <code className="break-all">{l.path}</code> con <code>git worktree remove</code>. La rama {l.branch ? <strong>{l.branch}</strong> : null} se queda en el repositorio. Si tuviera cambios, git no la borra.</>}>
-                Borrar
-              </ConfirmAction>
+              <RemoveWorktreeButton id={l.id} path={l.path} branch={l.branch && l.branch !== 'HEAD' ? l.branch : null} />
             )}</td>
           </tr>
         ))}

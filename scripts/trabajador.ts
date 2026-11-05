@@ -77,7 +77,7 @@ async function trustConfirmedHost(host: string, port: number, hostKey: string | 
 }
 
 const Worktree = z.discriminatedUnion('action', [
-  z.object({ action: z.literal('remove'), repo: z.string().max(1000), path: z.string().max(1000) }),
+  z.object({ action: z.literal('remove'), repo: z.string().max(1000), path: z.string().max(1000), localBranch: z.boolean().optional(), remoteBranch: z.boolean().optional() }),
   z.object({ action: z.literal('prune'), repo: z.string().max(1000) }),
 ])
 

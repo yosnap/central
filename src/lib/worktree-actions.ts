@@ -11,7 +11,7 @@ import { worktreeOp } from './worktrees'
 const mainPath = async (projectId: string) =>
   (await prisma.projectLocation.findFirst({ where: { projectId, kind: 'MAIN', missing: false }, select: { path: true } }))?.path ?? null
 
-async function remote(payload: Record<string, string>) {
+async function remote(payload: Record<string, string | boolean>) {
   if (!(await macOnline()).online) return { error: 'El Mac no está conectado: enciende el trabajador (bun run trabajador:instalar) y vuelve a intentarlo.' }
   await enqueue('worktree', payload)
 }
@@ -20,15 +20,18 @@ async function remote(payload: Record<string, string>) {
 export async function removeWorktreeAction(form: FormData) {
   await requireSession()
   const id = z.string().min(1).max(40).parse(form.get('id'))
+  const localBranch = form.get('local_branch') === 'true'
+  const remoteBranch = form.get('remote_branch') === 'true'
   const loc = await prisma.projectLocation.findUniqueOrThrow({ where: { id } })
   if (loc.kind !== 'WORKTREE' || loc.missing) return { error: 'No es un worktree que se pueda borrar' }
   const repo = await mainPath(loc.projectId)
   if (!repo) return { error: 'El proyecto no tiene carpeta principal' }
-  if (isRemote()) return remote({ action: 'remove', repo, path: loc.path, locationId: id })
-  const r = await worktreeOp({ action: 'remove', repo, path: loc.path })
+  if (isRemote()) return remote({ action: 'remove', repo, path: loc.path, locationId: id, localBranch, remoteBranch })
+  const r = await worktreeOp({ action: 'remove', repo, path: loc.path, localBranch, remoteBranch })
   if (!r.ok) return { error: r.error }
   await prisma.projectLocation.delete({ where: { id } })
   revalidatePath(`/proyectos/${loc.projectId}`)
+  if (r.notes?.length) return { error: `Worktree borrado. ${r.notes.join('. ')}` }
 }
 
 /** Quita de git las referencias a worktrees cuya carpeta ya no existe. */

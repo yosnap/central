@@ -130,10 +130,12 @@ const handlers: Partial<Record<JobType, (payload: Prisma.JsonValue, done: Done) 
   },
   worktree: async (payload, done) => {
     if (done.error) return
-    const r = done.result as { ok: boolean; error?: string }
+    const r = done.result as { ok: boolean; error?: string; notes?: string[] }
     if (!r.ok) throw new Error(r.error ?? 'No se pudo')
     const p = payload as { action: 'remove' | 'prune'; locationId?: string; projectId?: string }
     if (p.action === 'remove' && p.locationId) await prisma.projectLocation.deleteMany({ where: { id: p.locationId } })
+    // el worktree ya está borrado: lo que no se pudo con las ramas queda como error del trabajo para verlo
+    if (r.notes?.length) throw new Error(`Worktree borrado. ${r.notes.join('. ')}`)
     if (p.action === 'prune' && p.projectId) await prisma.projectLocation.deleteMany({ where: { projectId: p.projectId, missing: true } })
   },
   'container-env': async (payload, done) => {

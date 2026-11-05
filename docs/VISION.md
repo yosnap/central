@@ -126,7 +126,7 @@ Testimonios: solo reales y con permiso; Central no genera testimonios.
 Informe, nunca borrado automático:
 
 - `node_modules`, `.next`, `dist`, `build` de proyectos parados (lo que más ocupa; se recupera con `bun install`).
-- Worktrees cuya rama ya está fusionada y sin cambios → `git worktree remove`.
+- Worktrees cuya rama ya está fusionada y sin cambios → `git worktree remove`; al borrar se elige si también se borra su rama local (`git branch -d`) y la de GitHub (solo si está fusionada en origin).
 - Copias y backups idénticos a su repo → mover a `_archivo` o comprimir.
 - `git gc` para compactar historiales (sin reescribir historia).
 - Proyectos sin remoto: primero subirlos, después limpiar.
