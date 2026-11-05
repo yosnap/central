@@ -16,7 +16,23 @@ export type TabService = {
 }
 export type Loose = { id: string; name: string; image: string | null; role: string | null; domains: string[]; server: { name: string } }
 
-const SERVICE_NAMES = ['web', 'api', 'admin', 'tienda', 'worker', 'programador', 'mcp', 'agente', 'herramienta', 'n8n', 'base de datos', 'caché', 'almacenamiento', 'correo'].map((v) => ({ value: v, label: v }))
+/** Nombres sugeridos, con lo que suele ir en cada uno debajo (se puede escribir cualquier otro). */
+const SERVICE_NAMES = ([
+  ['web', 'La web o la app principal'],
+  ['api', 'Backend o API'],
+  ['admin', 'Panel de administración'],
+  ['tienda', 'Tienda online'],
+  ['worker', 'Tareas en segundo plano: colas, envíos, procesos largos'],
+  ['programador', 'Tareas periódicas (cron, scheduler)'],
+  ['mcp', 'Servidor MCP para agentes'],
+  ['agente', 'Agente IA: Hermes, OpenClaw, Paperclip…'],
+  ['herramienta', 'App de terceros: Postiz, Plausible, Umami, Chatwoot…'],
+  ['n8n', 'Automatizaciones'],
+  ['base de datos', 'PostgreSQL, MySQL, MongoDB…'],
+  ['caché', 'Redis, Valkey…'],
+  ['almacenamiento', 'Ficheros: MinIO, S3, SeaweedFS…'],
+  ['correo', 'SMTP, Resend, buzones…'],
+] as const).map(([value, hint]) => ({ value, label: value, hint }))
 
 /** Pestaña de Pruebas o Producción: los servicios del entorno, editables uno a uno, y cómo añadir más. */
 export function ServicesTab({ projectId, environment, framework, services, servers, containerOptions, suggested }: {
