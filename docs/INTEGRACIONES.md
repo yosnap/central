@@ -101,7 +101,7 @@ Variables: `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_
 
 ## 5. Repositorios: GitHub y GitLab
 
-- GitHub: token personal guardado en Ajustes o, si no hay, la sesión de `gh` del Mac (se pide en el momento; no se guarda). Hecho en la fase 2 (`src/lib/repo-sync.ts`). GitLab: token por instancia (gitlab.com, GitLab de Blocknovas…). Gitea/autoalojados (p. ej. `git.rcassociats.com`): token si tienen API, si no solo `git fetch`.
+- GitHub: token personal guardado en Ajustes o, si no hay, la sesión de `gh` del Mac (se pide en el momento; no se guarda). Puede haber varios tokens por servidor, cada uno con su cuenta u organización (`IntegrationConnection.account`): cada repositorio usa el de su dueño (también grupos de GitLab), si no el general del servidor. Hecho en la fase 2 (`src/lib/repo-sync.ts`). GitLab: token por instancia (gitlab.com, GitLab de Blocknovas…). Gitea/autoalojados (p. ej. `git.rcassociats.com`): token si tienen API, si no solo `git fetch`.
 - Se configura una vez por proveedor/instancia y cada `RepoRemote` usa la suya según el host.
 
 ---

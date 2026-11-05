@@ -26,11 +26,18 @@ function ghCliToken(): string | null {
   return ghToken
 }
 
-async function tokenFor(host: string, provider: RepoRemote['provider']): Promise<Token | null> {
-  const conns = await prisma.integrationConnection.findMany({ where: { provider: { in: ['GITHUB', 'GITLAB', 'GITEA'] } } })
-  const conn = conns.find((c) => {
-    try { return new URL(c.baseUrl ?? '').hostname === host } catch { return false }
-  })
+/**
+ * Token de Ajustes para un repositorio: primero el de su cuenta u organización («asociacion» para asociacion/web,
+ * también grupos de GitLab como «agencia/clientes»), si no el general de ese servidor, y si no cualquiera de él.
+ */
+async function tokenFor(host: string, provider: RepoRemote['provider'], path?: string | null): Promise<Token | null> {
+  const conns = (await prisma.integrationConnection.findMany({ where: { provider: { in: ['GITHUB', 'GITLAB', 'GITEA'] } } }))
+    .filter((c) => { try { const u = new URL(c.baseUrl ?? ''); return u.hostname === host || u.host === host } catch { return false } })
+  const repo = (path ?? '').toLowerCase()
+  const owned = conns
+    .filter((c) => c.account && repo.startsWith(`${c.account.toLowerCase()}/`))
+    .sort((a, b) => (b.account?.length ?? 0) - (a.account?.length ?? 0))
+  const conn = owned[0] ?? conns.find((c) => !c.account) ?? conns[0]
   const saved = conn ? decryptJson<{ token: string }>(conn.secret)?.token : null
   if (saved) return { token: saved, source: 'ajustes' }
   if (provider === 'GITHUB') {
@@ -146,7 +153,7 @@ export async function syncRemote(r: RepoRemote): Promise<RepoRemote> {
     if (!r.path) throw new SyncError('No se reconoce el repositorio en la URL')
     if (provider === 'OTHER') provider = await detectProvider(r.host)
     if (provider === 'OTHER') throw new SyncError('Proveedor sin API conocida')
-    const token = await tokenFor(r.host, provider)
+    const token = await tokenFor(r.host, provider, r.path)
     const data = provider === 'GITHUB' ? await github(r.path, token) : provider === 'GITLAB' ? await gitlab(r.host, r.path, token) : await gitea(r.host, r.path, token)
     return prisma.repoRemote.update({ where: { id: r.id }, data: { ...data, syncError: null, syncedAt: new Date() } })
   } catch (e) {

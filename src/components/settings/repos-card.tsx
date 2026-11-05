@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { addRepoToken, syncAllRepos } from '@/lib/repo-actions'
 import { deleteConnection } from '@/lib/settings-actions'
 import { ghSessionAvailable } from '@/lib/repo-sync'
-import { ActionForm, Card, ConfirmAction, Input, Notice, Pill, Select, SubmitButton, Table } from '@/components/ui'
+import { ActionForm, Card, ConfirmAction, Field, Input, Notice, Pill, Select, SubmitButton, Table } from '@/components/ui'
 import { fmtDateTime } from '@/lib/format'
 
 const PROVIDERS = [{ value: 'GITHUB', label: 'GitHub' }, { value: 'GITLAB', label: 'GitLab' }, { value: 'GITEA', label: 'Gitea' }]
@@ -41,11 +41,13 @@ export async function ReposCard() {
       )}
 
       {tokens.length > 0 && (
-        <Table head={['Proveedor', 'Servidor', 'Guardado', '']}>
+        <Table head={['Nombre', 'Proveedor', 'Servidor', 'Cuenta u organización', 'Guardado', '']}>
           {tokens.map((t) => (
             <tr key={t.id}>
+              <td className="font-medium">{t.label}</td>
               <td>{label(t.provider)}</td>
-              <td className="font-mono text-sm">{t.label}</td>
+              <td className="font-mono text-sm">{t.baseUrl?.replace(/^https?:\/\//, '')}</td>
+              <td className="font-mono text-sm">{t.account ?? <span className="font-sans text-muted">Todas (general)</span>}</td>
               <td className="text-muted">{fmtDateTime(t.updatedAt)}</td>
               <td className="text-right">
                 <ConfirmAction action={deleteConnection} fields={{ id: t.id }} title="Quitar este token" description={`Central dejará de consultar ${t.label} con este token.`} confirmLabel="Quitar" success="Token quitado">Quitar</ConfirmAction>
@@ -55,11 +57,21 @@ export async function ReposCard() {
         </Table>
       )}
 
-      <ActionForm action={addRepoToken} success="Token guardado y repositorios consultados" className="mt-5 grid gap-3 md:grid-cols-[minmax(10rem,1fr)_2fr_2fr_auto]">
-        <Select name="provider" aria-label="Proveedor" defaultValue="GITHUB" options={PROVIDERS} />
-        <Input name="host" aria-label="Servidor" placeholder="Vacío: github.com o gitlab.com · o git.miempresa.com" className="font-mono" />
-        <Input name="token" type="password" aria-label="Token" placeholder="Token de acceso (solo lectura basta)" required autoComplete="off" />
-        <SubmitButton pendingText="Guardando…">Añadir token</SubmitButton>
+      <ActionForm action={addRepoToken} success="Token guardado y repositorios consultados" className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Field label="Proveedor" htmlFor="tok-provider"><Select id="tok-provider" name="provider" defaultValue="GITHUB" options={PROVIDERS} /></Field>
+        <Field label="Servidor" htmlFor="tok-host" hint="Vacío: github.com o gitlab.com. Si es un GitLab o Gitea propio, su dominio (git.cliente.com).">
+          <Input id="tok-host" name="host" placeholder="github.com" className="font-mono" />
+        </Field>
+        <Field label="Cuenta u organización" htmlFor="tok-account" hint="Vacío: token general de ese servidor. Con nombre, solo para sus repositorios (la asociación, una agencia, un cliente).">
+          <Input id="tok-account" name="account" placeholder="humanitek" className="font-mono" autoComplete="off" />
+        </Field>
+        <Field label="Nombre" htmlFor="tok-label" hint="Para reconocerlo en la lista.">
+          <Input id="tok-label" name="label" placeholder="Asociación Humanitek" autoComplete="off" />
+        </Field>
+        <Field label="Token" htmlFor="tok-token" hint="Basta con solo lectura. Se guarda cifrado." className="xl:col-span-2">
+          <Input id="tok-token" name="token" type="password" placeholder="Token de acceso" required autoComplete="off" />
+        </Field>
+        <SubmitButton className="justify-self-start" pendingText="Guardando…">Añadir token</SubmitButton>
       </ActionForm>
     </Card>
   )

@@ -45,6 +45,8 @@ const hostOf = (v: unknown) => String(v ?? '').trim().toLowerCase().replace(/^[a
 const TokenForm = z.object({
   provider: z.enum(['GITHUB', 'GITLAB', 'GITEA']),
   host: z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}(:\d+)?$/, 'Servidor no válido: escribe solo el dominio, por ejemplo github.com o git.miempresa.com'),
+  account: z.string().trim().transform((v) => v.replace(/^@/, '').replace(/^\/+|\/+$/g, '')).pipe(z.string().max(200).regex(/^[\w.\-/]*$/, 'Cuenta u organización no válida: escribe solo su nombre, por ejemplo humanitek')).optional(),
+  label: z.string().trim().max(80).optional(),
   token: z.string().trim().min(8, 'Pega el token completo').max(500, 'Ese token es demasiado largo'),
 })
 
@@ -56,13 +58,16 @@ export async function addRepoToken(form: FormData) {
   if (!r.success) return { error: r.error.issues.map((i) => i.message).join('. ') }
   const d = r.data
   const baseUrl = `https://${d.host}`
-  const existing = await prisma.integrationConnection.findFirst({ where: { provider: d.provider, baseUrl } })
-  const data = { provider: d.provider, label: d.host, baseUrl, secret: encryptJson({ token: d.token }), lastError: null }
+  const account = d.account || null
+  // un token por servidor y cuenta: volver a añadirlo lo sustituye
+  const existing = await prisma.integrationConnection.findFirst({ where: { provider: d.provider, baseUrl, account } })
+  const data = { provider: d.provider, label: d.label || (account ? `${d.host}/${account}` : d.host), account, baseUrl, secret: encryptJson({ token: d.token }), lastError: null }
   if (existing) await prisma.integrationConnection.update({ where: { id: existing.id }, data })
   else await prisma.integrationConnection.create({ data })
-  // los remotos de ese host pasan a ese proveedor y se vuelven a consultar
-  await prisma.repoRemote.updateMany({ where: { host: d.host }, data: { provider: d.provider } })
-  const ids = (await prisma.repoRemote.findMany({ where: { host: d.host }, select: { projectId: true } })).map((r) => r.projectId)
+  // los remotos de ese servidor (y de esa cuenta, si se indicó) pasan a ese proveedor y se vuelven a consultar
+  const where = { host: d.host, ...(account ? { path: { startsWith: `${account}/`, mode: 'insensitive' as const } } : {}) }
+  await prisma.repoRemote.updateMany({ where, data: { provider: d.provider } })
+  const ids = (await prisma.repoRemote.findMany({ where, select: { projectId: true } })).map((r) => r.projectId)
   if (ids.length) await syncRepos({ projectIds: ids })
   revalidatePath('/', 'layout')
 }
