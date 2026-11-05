@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.11 — 2026-11-05
+
+- Repositorio: una rama local creada desde origin/develop u origin/main (git la deja siguiendo a esa rama) ya no sale «por bajar» con todo lo que develop avanzó después. Si no tiene commits propios, aparece en «Ramas locales ya fusionadas (se pueden borrar)».
+
 ## 0.4.10 — 2026-11-05
 
 - Servidores: la tarjeta Protección copia o descarga lo pendiente como issue en Markdown (servidor, comandos de cada arreglo y cómo hacerlo sin quedarse fuera), para pasárselo a un agente o abrirlo en GitHub.
