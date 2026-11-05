@@ -92,7 +92,7 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
             </Table>
           )}
         </Card>
-        <ProtectionCard checks={s.checks} />
+        <ProtectionCard checks={s.checks} server={s} />
       </div>
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
         <Card title="Dominios que sirve el proxy" note="Traefik de Easypanel, Dokploy o Coolify.">
