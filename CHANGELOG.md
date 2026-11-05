@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.9 — 2026-11-05
+
+- Servidores: si el Mac no entra para instalar infobar, la ventana y el aviso explican los pasos en orden: añadir la clave de Central en el proveedor (mejor como clave por defecto, para que cada servidor nuevo se instale a la primera) o guardar en el Mac la clave que dio el proveedor, con su frase en el Llavero.
+
 ## 0.4.8 — 2026-11-04
 
 - Clasificación de proyectos: tipos nuevos (servidor MCP, CLI, librería o paquete, agente o subagente, plugin o kit de agente, plantilla o repositorio para clonar, documentación) y plataformas nuevas (GitHub, Claude Code, Codex, npm, PyPI, VS Code / Cursor). El escáner propone MCP, CLI y plugin de agente en lugar de «librería».
