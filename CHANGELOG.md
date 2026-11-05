@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.10 — 2026-11-05
+
+- Servidores: la tarjeta Protección copia o descarga lo pendiente como issue en Markdown (servidor, comandos de cada arreglo y cómo hacerlo sin quedarse fuera), para pasárselo a un agente o abrirlo en GitHub.
+- Worktrees: al borrar uno fusionado se elige si también se borra su rama local (marcado por defecto) y la de GitHub (desmarcado; solo si está fusionada en origin). Nunca se fuerza: lo que no se puede borrar con seguridad se queda y se avisa.
+
 ## 0.4.9 — 2026-11-05
 
 - Servidores: si el Mac no entra para instalar infobar, la ventana y el aviso explican los pasos en orden: añadir la clave de Central en el proveedor (mejor como clave por defecto, para que cada servidor nuevo se instale a la primera) o guardar en el Mac la clave que dio el proveedor, con su frase en el Llavero.
