@@ -1,5 +1,6 @@
 import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
+import { forwardedProto } from '@/lib/auth'
 import { requireSession } from '@/lib/session'
 import { addApiConnection, addChannel, deleteChannel, deleteConnection, linkChannel, removeScanRoot, saveSn4p, scanNow, syncAll, syncOne, testSn4p, unlinkChannel } from '@/lib/settings-actions'
 import { MAC_TASKS, macTaskInstalled } from '@/lib/mac-tasks'
@@ -24,7 +25,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   await requireSession()
   const sp = await searchParams
   const h = await headers()
-  const origin = `${h.get('x-forwarded-proto') ?? 'http'}://${h.get('host') ?? 'localhost:3099'}`
+  const origin = `${forwardedProto(h) || 'http'}://${h.get('host') ?? 'localhost:3099'}`
   const keyOk = Buffer.from(process.env.CENTRAL_ENCRYPTION_KEY ?? '', 'base64').length === 32
   const [roots, lastUptime, sn4p, connections, channels, projects] = await Promise.all([
     prisma.scanRoot.findMany({ orderBy: { path: 'asc' } }),

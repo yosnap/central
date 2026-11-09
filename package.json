@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "next dev -p 3099",
-    "build": "bunx prisma generate && bun scripts/next-run.ts build",
-    "start": "bun scripts/next-run.ts start -p 3099",
+    "build": "bunx prisma generate && next build",
+    "start": "next start -p 3099",
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "db:push": "bunx prisma db push",

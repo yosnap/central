@@ -9,3 +9,5 @@ plans
 .env
 .env.*
 !.env.example
+# credenciales OAuth descargadas a mano (client_secret_*.json de Google Cloud Console)
+.value/

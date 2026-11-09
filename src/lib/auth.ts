@@ -27,9 +27,18 @@ export function checkPassword(pw: string): boolean {
   return !!real && pw.length === real.length && timingSafeEqual(Buffer.from(pw), Buffer.from(real))
 }
 
-/** Si la petición llegó por HTTPS, incluso detrás de un proxy (Dokploy) que la reenvía por HTTP. */
+/** Primer valor de x-forwarded-proto (puede venir "https,http" con varios proxies encadenados), normalizado. */
+export function forwardedProto(h: Headers): string {
+  return h.get('x-forwarded-proto')?.split(',')[0]?.trim().toLowerCase() ?? ''
+}
+
+/**
+ * Si la petición llegó por HTTPS. Solo se considera HTTP (y se quita `Secure` de la cookie) cuando
+ * la cabecera lo dice explícitamente; sin cabecera o con cualquier otro valor se asume HTTPS, para
+ * no perder `Secure` sin aviso si algún día hay más de un proxy delante.
+ */
 export function isHttps(h: Headers): boolean {
-  return h.get('x-forwarded-proto') === 'https'
+  return forwardedProto(h) !== 'http'
 }
 
 // Desbloqueo temporal de secretos: token distinto del de sesión (prefijo propio en la firma).
