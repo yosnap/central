@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.16 — 2026-11-10
+
+- Windows: `bun run build` y `bun run start` funcionan sin `--bun` (la imagen Docker no cambia) y `start` usa el puerto 3099, igual que `dev`.
+- Explorador de carpetas: las unidades de Windows (C:, D:…) salen como accesos directos, las migas de pan usan la raíz real de cada sistema y la flecha ya no desaparece en el primer elemento.
+- Ajustes › Carpetas: se aceptan rutas absolutas de Windows y los avisos al añadir una carpeta dicen el motivo real (ruta corta o no absoluta, carpeta inexistente, escaneo ya en marcha) en lugar del genérico.
+- Sesión: la cookie solo pierde `Secure` cuando la petición llega claramente por HTTP, así que el login funciona con `next start` por HTTP directo sin debilitarla detrás de varios proxies.
+
 ## 0.4.15 — 2026-11-05
 
 - Ajustes › Repositorios: varios tokens por servidor, cada uno con su cuenta u organización y un nombre (tu cuenta, la asociación, una agencia, un cliente) y también servidores propios de GitLab o Gitea. Cada repositorio se consulta con el token de su dueño; si no hay, con el general de ese servidor.
