@@ -24,6 +24,13 @@ export type FolderListing = {
 
 function shortcuts() {
   const out = [{ name: 'Inicio', path: os.homedir() }]
+  if (process.platform === 'win32') {
+    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+      const root = `${letter}:\\`
+      if (fs.existsSync(root)) out.push({ name: `${letter}:`, path: root })
+    }
+    return out
+  }
   try {
     for (const v of fs.readdirSync('/Volumes')) {
       const p = path.join('/Volumes', v)
@@ -39,9 +46,18 @@ export async function browseFolder(target?: string): Promise<FolderListing> {
   const root = (process.env.SCAN_ROOTS ?? '').split(';').find((r) => r && fs.existsSync(r))
   const start = root ?? os.homedir()
   const dir = path.resolve(target || start)
-  const parts = dir.split(path.sep).filter(Boolean)
-  const crumbs = [{ name: '/', path: '/' }, ...parts.map((name, i) => ({ name, path: '/' + parts.slice(0, i + 1).join('/') }))]
-  const base = { path: dir, parent: dir === '/' ? null : path.dirname(dir), crumbs, shortcuts: shortcuts() }
+  // migas de pan con rutas absolutas reales (nada de reconstruirlas a mano: en Windows
+  // la raíz es «C:\», no «/», y una ruta inventada como «/C:/Users» no resuelve bien ahí)
+  const dirRoot = path.parse(dir).root
+  const rootName = dirRoot.length > 1 ? dirRoot.slice(0, -1) : dirRoot
+  const rest = dir.slice(dirRoot.length).split(path.sep).filter(Boolean)
+  const crumbs = [{ name: rootName, path: dirRoot }]
+  let acc = dirRoot
+  for (const name of rest) {
+    acc = path.join(acc, name)
+    crumbs.push({ name, path: acc })
+  }
+  const base = { path: dir, parent: dir === dirRoot ? null : path.dirname(dir), crumbs, shortcuts: shortcuts() }
   try {
     const dirs = fs.readdirSync(dir, { withFileTypes: true })
       .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !SECRET.test(e.name))

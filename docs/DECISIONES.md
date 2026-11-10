@@ -51,6 +51,9 @@ Herramienta open source elegida para el uptime y las notificaciones (Telegram + 
 ## 2026-10-25 · Bun como runtime y gestor de paquetes
 Central usa Bun: `bun install` (lockfile `bun.lock`), `bun run` para los scripts, `bunx` para las CLIs y `bun` para ejecutar TypeScript directamente (se quita tsx). `build` y `start` usan `bun --bun next …`; el servidor de desarrollo corre sobre Node (`next dev -p 3099`) porque con `--bun` Bun no resuelve los paquetes externos con hash que Turbopack genera para `@prisma/client` y la app da error 500. Next sigue usando su propio empaquetador (Turbopack) para la web. La imagen Docker parte de `oven/bun`. Bun carga `.env` solo; `dotenv` se mantiene para la CLI de Prisma.
 
+## 2026-11-05 · `build` y `start` en local sin `--bun`
+En Windows, `bun --bun next build` falla (Bun no completa ahí el build de Next). La imagen Docker de producción no se toca: sigue con `bun --bun next build` y `bun --bun next start -p 3000` directamente en el `Dockerfile`, fuera de los scripts de `package.json`. Para instalaciones manuales en local (`bun run build`, `bun run start`, documentadas en el repositorio para quien clona el proyecto en cualquier sistema), `package.json` usa `next build`/`next start -p 3099` sin `--bun`, igual que `dev`: evita el fallo en Windows sin necesitar un script intermedio que detecte la plataforma (un primer intento con `bun scripts/next-run.ts` + `spawnSync` se descartó porque no reenvía señales y deja procesos de `next start` huérfanos al parar el servidor).
+
 ## 2026-10-25 · Puerto 3099 y SeaweedFS en 8334
 Central se lanza en local en el puerto 3099 (`bun run dev`), reservado para ella. SeaweedFS publica su API S3 en el 8334 del Mac y el panel en el 9334, porque el 8333 y el 9333 los usa otro proyecto.
 

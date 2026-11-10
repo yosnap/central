@@ -54,7 +54,7 @@ export function FolderPicker({ onPick, initialPath }: { onPick: (path: string) =
               )}
               {data.crumbs.map((c, i) => (
                 <span key={c.path} className="flex items-center gap-1">
-                  {i > 1 && <ChevronRight className="size-4 text-muted" aria-hidden />}
+                  {i > 0 && <ChevronRight className="size-4 text-muted" aria-hidden />}
                   <button type="button" onClick={() => go(c.path)} className={cn('cursor-pointer rounded-md px-1.5 py-0.5 hover:bg-accent-soft', i === data.crumbs.length - 1 && 'font-semibold text-accent-strong')}>{c.name}</button>
                 </span>
               ))}
