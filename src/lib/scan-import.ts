@@ -120,8 +120,11 @@ export async function importProjects(all: ScannedProject[], roots: string[], { m
   }
   const gone = await markGone(seenIds, roots, { mapPath, unmapPath }, now, log, exists)
   for (const r of roots) {
-    const rp = mapPath(path.resolve(r))
-    await prisma.scanRoot.upsert({ where: { path: rp }, update: { lastScanAt: now, found: all.length }, create: { path: rp, lastScanAt: now, found: all.length } })
+    const root = path.resolve(r)
+    const rp = mapPath(root)
+    // los proyectos de esta raíz, no los de todo el escaneo (scanRoots pone en `main.root` la raíz de la que sale cada uno)
+    const found = all.filter((p) => p.main.root === root).length
+    await prisma.scanRoot.upsert({ where: { path: rp }, update: { lastScanAt: now, found }, create: { path: rp, lastScanAt: now, found } })
   }
   return { projects: all.length, moved, gone }
 }
