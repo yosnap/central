@@ -21,6 +21,8 @@ Versión y descripción (`package.json`; si no está en la raíz, de los subproy
 
 La ubicación principal es la que no es worktree ni backup y tiene la actividad más reciente.
 
+Las carpetas `backup`, `backups` y `Backup Web realizadas` se reconocen igual en Windows (rutas con `\`) que en Mac o Linux, y lo mismo ocurre con las reglas de tipo por carpeta (`Proyectos test`, `Cursos`…). «Sin carpeta» compara las rutas sin distinguir `\` de `/` ni mayúsculas de minúsculas en Windows. Las rutas de worktree que da git en Windows (con `/`) se pasan a la forma del sistema (con `\`) antes de compararlas y guardarlas, y se emparejan sin distinguir mayúsculas, para que cada worktree salga una sola vez y unido a su repositorio. No cubre raíces por ruta de red (`\\servidor\…`), unidades mapeadas ni `subst`, donde git y el disco dan rutas distintas para la misma carpeta.
+
 ## Qué es cada proyecto (propuesta)
 
 El escáner propone tipo, plataforma y dominios (`src/lib/project-type.ts`); el usuario los confirma en la ficha o todos a la vez desde Pendientes. Nunca cambia lo ya confirmado.
