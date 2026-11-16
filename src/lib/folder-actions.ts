@@ -22,15 +22,47 @@ export type FolderListing = {
   error?: string
 }
 
-function shortcuts() {
-  const out = [{ name: 'Inicio', path: os.homedir() }]
-  if (process.platform === 'win32') {
-    for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
-      const root = `${letter}:\\`
-      if (fs.existsSync(root)) out.push({ name: `${letter}:`, path: root })
-    }
-    return out
+// Carpetas de sistema de Windows (papelera, restauración, recuperación…). Viven en la raíz de cada unidad y solo
+// se ocultan ahí: más abajo, una carpeta «Recovery» o que empiece por «$» es del usuario.
+const WINDOWS_ROOT_SYSTEM = /^\$|^(System Volume Information|Recovery|Config\.Msi)$/i
+const isWindowsSystem = (name: string, atDriveRoot: boolean) =>
+  process.platform === 'win32' && atDriveRoot && WINDOWS_ROOT_SYSTEM.test(name)
+
+// Unidades de Windows. Comprobarlas puede tardar segundos si hay una unidad de red desconectada, así que se hace
+// sin bloquear y fuera de la navegación: solo la primera vez se espera el resultado (con tope); después se sirve la
+// lista conocida y se refresca por detrás como mucho cada DRIVES_REFRESH_MS.
+const DRIVE_LETTERS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ']
+const DRIVES_REFRESH_MS = 10_000
+const DRIVES_FIRST_WAIT_MS = 1_500
+const drives = new Set<string>()
+let drivesCheckedAt = 0
+let firstDrivesCheck: Promise<unknown> | undefined
+// Una sola comprobación viva por unidad: mientras una no conteste (unidad colgada) no se lanza otra
+const probing = new Map<string, Promise<void>>()
+
+function probeDrive(letter: string): Promise<void> {
+  let probe = probing.get(letter)
+  if (!probe) {
+    // el resultado se aplica cuando llega, tarde lo que tarde: una unidad solo sale de la lista si contesta que no existe
+    probe = fs.promises.access(`${letter}:\\`).then(() => { drives.add(letter) }, () => { drives.delete(letter) }).finally(() => { probing.delete(letter) })
+    probing.set(letter, probe)
   }
+  return probe
+}
+
+async function windowsDrives() {
+  if (Date.now() - drivesCheckedAt >= DRIVES_REFRESH_MS) {
+    drivesCheckedAt = Date.now()
+    const all = Promise.all(DRIVE_LETTERS.map(probeDrive))
+    firstDrivesCheck ??= Promise.race([all, new Promise((resolve) => setTimeout(resolve, DRIVES_FIRST_WAIT_MS))])
+  }
+  await firstDrivesCheck
+  return DRIVE_LETTERS.filter((letter) => drives.has(letter)).map((letter) => ({ name: `${letter}:`, path: `${letter}:\\` }))
+}
+
+async function shortcuts() {
+  const out = [{ name: 'Inicio', path: os.homedir() }]
+  if (process.platform === 'win32') return [...out, ...(await windowsDrives())]
   try {
     for (const v of fs.readdirSync('/Volumes')) {
       const p = path.join('/Volumes', v)
@@ -57,10 +89,10 @@ export async function browseFolder(target?: string): Promise<FolderListing> {
     acc = path.join(acc, name)
     crumbs.push({ name, path: acc })
   }
-  const base = { path: dir, parent: dir === dirRoot ? null : path.dirname(dir), crumbs, shortcuts: shortcuts() }
+  const base = { path: dir, parent: dir === dirRoot ? null : path.dirname(dir), crumbs, shortcuts: await shortcuts() }
   try {
     const dirs = fs.readdirSync(dir, { withFileTypes: true })
-      .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !SECRET.test(e.name))
+      .filter((e) => e.isDirectory() && !e.name.startsWith('.') && !SECRET.test(e.name) && !isWindowsSystem(e.name, dir === dirRoot))
       .map((e) => {
         const p = path.join(dir, e.name)
         return { name: e.name, path: p, isProject: MARKERS.some((m) => fs.existsSync(path.join(p, m))) }

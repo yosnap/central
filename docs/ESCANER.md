@@ -52,7 +52,7 @@ Al terminar un escaneo, el proyecto que no se ha encontrado y del que no existe 
 
 ## Carpetas raíz
 
-Se gestionan en Ajustes: «Añadir carpeta» la guarda y la escanea en el momento (tiene que existir en el equipo). La ruta se escribe o se elige con «Explorar…», un explorador propio que lista solo carpetas del equipo donde corre Central, marca las que ya son proyectos y se salta las ocultas y las de credenciales; «Quitar» deja de escanearla, pero sus proyectos ya importados se quedan. `SCAN_ROOTS` solo se usa si todavía no hay ninguna raíz guardada.
+Se gestionan en Ajustes: «Añadir carpeta» la guarda y la escanea en el momento (tiene que existir en el equipo). La ruta se escribe o se elige con «Explorar…», un explorador propio que lista solo carpetas del equipo donde corre Central, marca las que ya son proyectos y se salta las ocultas y las de credenciales (en Windows, también las de sistema que hay en la raíz de cada unidad: `$Recycle.Bin` y demás que empiezan por `$`, `System Volume Information`, `Recovery` y `Config.Msi`); las unidades de Windows (C:, D:…) salen como accesos directos y se comprueban sin bloquear: solo la primera vez se espera, 1,5 s como mucho; después se enseña la lista conocida y se refresca por detrás al navegar, como mucho cada 10 s, de modo que una unidad de red desconectada no frena la navegación (entrar en una carpeta de una unidad caída sí puede tardar); «Quitar» deja de escanearla, pero sus proyectos ya importados se quedan. `SCAN_ROOTS` solo se usa si todavía no hay ninguna raíz guardada.
 
 Un grupo que solo trae worktrees (su repositorio principal está en otra raíz, como pasa con Orca) se asocia al proyecto por su remoto y solo añade ubicaciones: no cambia la versión, la rama ni el último commit del proyecto.
 
