@@ -34,9 +34,10 @@ export async function createNote(body: string, target: NoteTarget, { source, act
     const exists = 'clientId' in target
       ? await tx.client.findUnique({ where: { id: target.clientId }, select: { id: true } })
       : 'projectId' in target
-        ? await tx.project.findUnique({ where: { id: target.projectId }, select: { id: true } })
+        ? await tx.project.findFirst({ where: { id: target.projectId, excluded: false }, select: { id: true } })
         : await tx.website.findUnique({ where: { id: target.websiteId }, select: { id: true } })
-    if (!exists) throw new MutationError('invalid', 'clientId' in target ? 'No existe ese cliente' : 'projectId' in target ? 'No existe ese proyecto' : 'No existe esa web')
+    // un proyecto excluido está fuera de Central: igual que si no existiera
+    if (!exists) throw new MutationError('not_found', 'clientId' in target ? 'No existe ese cliente' : 'projectId' in target ? 'No existe ese proyecto' : 'No existe esa web')
     const n = await tx.note.create({ data: { body, source, ...target } })
     await audit(tx, actor, 'create', 'note', n.id, changesOf({}, { body, ...target }))
     return { id: n.id, body: n.body, pinned: n.pinned, source: n.source, clientId: n.clientId, projectId: n.projectId, websiteId: n.websiteId, createdAt: n.createdAt }

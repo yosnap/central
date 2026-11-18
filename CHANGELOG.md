@@ -2,12 +2,13 @@
 
 ## 0.6.0 — 2026-11-18
 
-- API v1 con escrituras ([docs/API.md](docs/API.md#escrituras)), con el permiso `escritura`, que ya se puede conceder en Ajustes › Apps conectadas: alta y cambio de clientes, notas en clientes, proyectos o webs, estado y fase de un proyecto y estado y fecha prevista de las fases de un presupuesto (con `presupuestos`). Nunca borra: no hay ningún `DELETE`.
+- API v1 con escrituras ([docs/API.md](docs/API.md#escrituras)), con el permiso `escritura` (que incluye `lectura`), que ya se puede conceder en Ajustes › Apps conectadas: alta y cambio de clientes, notas en clientes, proyectos o webs, estado y fase de un proyecto y estado y fecha prevista de las fases de un presupuesto (con `presupuestos`). Nunca borra: no hay ningún `DELETE`.
 - Cada cambio exige la `version` leída (huella de los campos editables): si otro cambió la entidad entretanto, 409 con la actual y sin tocar nada. Un estado fijado a mano no se cambia por la API salvo que la petición diga qué hacer con el fijado.
 - Registro `ApiChange` con la app, la entidad y el antes y después de cada campo (migración aditiva).
 - Las fichas de cliente y proyecto, la lista de clientes y las fases de un presupuesto dan su `version` (y las fases, su `id`).
 - La ficha de clientes, las notas y las fases de presupuesto de la web y `update_phase` del MCP usan las mismas funciones que la API (`src/lib/api/mutations/`), con el mismo comportamiento.
-- La API ya no deja en `null` los números sueltos (un teléfono como `600000000`) por tomarlos por una IP.
+- La API ya no deja en `null` los números sueltos (un teléfono como `600000000`) por tomarlos por una IP, y sigue quitando las IPv4 abreviadas, decimales u hexadecimales.
+- Si la BD está ocupada, las escrituras responden 503 con `Retry-After` en lugar de 500. `bun run test:bd` prueba la concurrencia contra la BD local.
 
 ## 0.5.1 — 2026-11-18
 

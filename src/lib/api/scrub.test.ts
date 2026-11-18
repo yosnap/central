@@ -95,4 +95,11 @@ describe('limpieza de texto', () => {
     expect(scrubDeep({ phone: '600000000', taxId: '12345678', zip: '28001' }, { paths: false })).toEqual({ phone: '600000000', taxId: '12345678', zip: '28001' })
     expect(scrubDeep({ ip: '10.0.0.1:22', url: 'http://10.0.0.1/' }, { paths: false })).toEqual({ ip: null, url: null })
   })
+
+  test('las IPv4 abreviadas, decimales u hexadecimales también se quitan', () => {
+    const forms = ['127.1', 'http://127.1/', 'http://2130706433/', 'https://2130706433:8443/x', '0x7f.0.0.1', 'http://0x7f.0.0.1/', '10.1:22', '0177.0.0.1', '[::ffff:a00:1]', 'ssh://root@10.0.0.1', 'https://10.0.0.1.nip.io/x']
+    for (const v of forms) expect([v, scrubDeep({ v }, { paths: false }).v]).toEqual([v, null])
+    const kept = ['600000000', '+34600000000', '2130706433', 'B12345678', '12345678Z', 'X1234567L', '28001', 'https://ejemplo.es', 'hola@ejemplo.es']
+    for (const v of kept) expect([v, scrubDeep({ v }, { paths: false }).v]).toEqual([v, v])
+  })
 })

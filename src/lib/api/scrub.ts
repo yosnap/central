@@ -33,8 +33,10 @@ export function isIpValue(s: string): boolean {
   const v = s.trim()
   if (!v || /\s/.test(v)) return false
   if (BARE_IP.test(v)) return true
-  // sin una IP escrita no hay nada que quitar: el analizador de URL lee `600000000` (un teléfono) como una IPv4
-  if (!IP_TEST.test(v)) return false
+  // un valor sin esquema ni `.`, `:` o `[` (teléfono, NIF, código postal) no es una dirección, aunque el analizador
+  // de URL lea `600000000` como una IPv4; las formas abreviadas, decimales o hexadecimales (`127.1`, `2130706433`
+  // con esquema, `0x7f.0.0.1`, `10.1:22`) sí lo son y se quitan
+  if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(v) && !/[.:[]/.test(v)) return false
   let host: string
   try { host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `http://${v}`).hostname } catch { return false }
   return IP_TEST.test(host.replace(/^\[|\]$/g, ''))

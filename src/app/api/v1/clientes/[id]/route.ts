@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache'
 import { getClient } from '@/lib/api/clients'
 import { clientPatchSchema, clientVersion, updateClient } from '@/lib/api/mutations/clients'
 import { actorOf, apiRoute, json, notFound, writeBody } from '@/lib/api/route'
+import { WRITE_SCOPES } from '@/lib/api/scopes'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ export const GET = apiRoute<{ id: string }>('lectura', async (_req, { params }) 
 })
 
 /** Cambia los datos indicados de un cliente. Exige la `version` leída: si otro lo cambió antes, 409 con el actual. */
-export const PATCH = apiRoute<{ id: string }>('escritura', async (req, { params, caller }) => {
+export const PATCH = apiRoute<{ id: string }>(WRITE_SCOPES, async (req, { params, caller }) => {
   const { version, ...patch } = await writeBody(req, clientPatchSchema)
   const client = await updateClient(params.id, patch, { actor: actorOf(caller), expectedVersion: version })
   revalidatePath('/clientes')

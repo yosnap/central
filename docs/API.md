@@ -12,10 +12,10 @@ Las claves se crean en **Ajustes → Apps conectadas**: un nombre (la app) y uno
 |---|---|
 | `lectura` | Clientes, proyectos, webs, servidores, alertas, pendientes y agenda |
 | `presupuestos` | Presupuestos (ver, PDF, Word y crear borradores) y tarifas |
-| `escritura` | Crear y cambiar clientes, notas, estado y fase de proyectos y, junto con `presupuestos`, el estado y la fecha de las fases de un presupuesto. Nunca borrar |
+| `escritura` | Crear y cambiar clientes, notas, estado y fase de proyectos y, junto con `presupuestos`, el estado y la fecha de las fases de un presupuesto. Nunca borrar. **Implica `lectura`**: al crear la clave se le añade, y las rutas de escritura exigen las dos |
 
-Los permisos no se heredan: una clave con solo `presupuestos` no lee clientes, y para cambiar algo hace falta leerlo
-antes (su `version`), así que una app que escribe suele tener `lectura` y `escritura`.
+Fuera de eso, los permisos no se heredan: una clave con solo `presupuestos` no lee clientes. `escritura` lleva
+`lectura` porque una escritura devuelve la entidad (y, si hay conflicto, la actual): sin ella serviría para leer.
 
 - La clave completa (`cen_` y 43 caracteres) **solo se ve una vez**, al crearla. Central guarda su SHA-256 y los
   12 primeros caracteres para reconocerla en la lista; la comparación es en tiempo constante.
@@ -34,7 +34,9 @@ JSON con `cache-control: no-store` y fechas en ISO 8601 (UTC). Importes de presu
 Nunca incluyen IPs, direcciones SSH, rutas de clave, tokens ni secretos (`src/lib/api/scrub.ts`):
 
 - Toda respuesta JSON pasa por `scrubDeep`: un valor que es una dirección con una IP (`203.0.113.7:3000`,
-  `http://[2001:db8::1]`, `https://web.203.0.113.7.sslip.io`) sale como `null` (en una lista, desaparece) y una IP en un
+  `http://[2001:db8::1]`, `https://web.203.0.113.7.sslip.io`, y también las formas abreviadas, decimales u
+  hexadecimales como `127.1`, `http://2130706433/`, `0x7f.0.0.1` o `10.1:22`) sale como `null` (en una lista,
+  desaparece). Un valor sin esquema ni `.`, `:` o `[` (un teléfono, un NIF, un código postal) se deja tal cual y una IP en un
   texto se cambia por `[IP oculta]`. Los campos de versión no se tocan.
 - Servidores y alertas, además, sin `host`, `sshPort` ni `panelUrl`, y con las rutas de usuario o de clave
   (`~/…`, `/Users/…`, `/home/…`, `/root/…`, `.ssh/…`, `id_ed25519`, `*.pem`) cambiadas por `[ruta oculta]`.
@@ -47,10 +49,11 @@ Nunca incluyen IPs, direcciones SSH, rutas de clave, tokens ni secretos (`src/li
 | `403` | La clave no tiene el permiso de la ruta | `{ "error": "forbidden", "scope": "presupuestos" }` |
 | `400` | Parámetros no válidos; cuerpo que no es JSON o pasa de 256 KiB | `{ "error": "invalid", "detail": "…" }` |
 | `404` | No existe | `{ "error": "not_found" }` (en escrituras, con `detail`) |
-| `422` | Escrituras: cuerpo JSON que no cumple el esquema (campo desconocido, tipo, tope, fecha imposible, sin `version`) o que apunta a algo que no existe. `POST presupuestos` con un cliente que no existe | `{ "error": "invalid", "detail": "campo: motivo; …" }` |
+| `422` | Escrituras: cuerpo JSON que no cumple el esquema (campo desconocido, tipo, tope, fecha imposible, sin `version`). `POST presupuestos` con un cliente que no existe | `{ "error": "invalid", "detail": "campo: motivo; …" }` |
 | `409` | Escrituras: la `version` no es la actual (`conflict`), nombre de cliente repetido (`duplicate`) o estado fijado a mano (`status_locked`) | `{ "error": "conflict", "detail": "…", "current": { … } }` |
 | `409` | `POST presupuestos` choca varias veces con otra alta por el número (muy raro): reintenta | `{ "error": "invalid", "detail": "…" }` |
 | `405` | Un método que la ruta no tiene (no hay ningún `DELETE`) | vacío |
+| `503` | Escrituras: la BD está ocupada (tiempo de espera o conflicto de la transacción, P2024/P2028/P2034). Con `Retry-After`; repetir la petición con la misma `version` es seguro | `{ "error": "busy", "detail": "…" }` |
 | `429` | Límite superado | `{ "error": "rate_limited" }` |
 | `500` | Fallo interno (sin detalles) | `{ "error": "internal" }` |
 
@@ -115,7 +118,7 @@ que otro haya cambiado mientras tanto:
 |---|---|
 | `POST clientes` | `name` (obligatorio, hasta 120, único sin distinguir mayúsculas: si ya existe, 409 `duplicate`); opcionales `company` (160), `email` (200, válido), `phone` (40), `taxId` (30), `address` (500) |
 | `PATCH clientes/{id}` | `version` y al menos uno de los campos de arriba |
-| `POST notas` | `body` (1–5000) y exactamente uno de `clientId`, `projectId` o `websiteId`; queda con `source: "api"`. Un destino que no existe da 422 |
+| `POST notas` | `body` (1–5000) y exactamente uno de `clientId`, `projectId` o `websiteId`; queda con `source: "api"`. Un destino que no existe, o un proyecto excluido, da 404 |
 | `PATCH proyectos/{id}` | `version` y al menos uno de `status` (ACTIVE, MAINTENANCE, DORMANT, ARCHIVED), `statusLocked` (booleano) y `phase` (texto libre, hasta 80, o `null`). Un proyecto excluido da 404 |
 | `PATCH presupuestos/{id}/fases/{faseId}` | `version` y al menos uno de `status` (PENDING, IN_PROGRESS, DONE, INVOICED) y `dueDate` (AAAA-MM-DD o `null`). Al pasar a DONE o INVOICED se apunta `completedAt` (de hecha a facturada se conserva); al volver atrás, se borra. La fase tiene que ser de ese presupuesto (id o número); si no, 404 |
 
@@ -163,6 +166,11 @@ curl -fsS -X PATCH -H "Authorization: Bearer $CENTRAL_KEY" -H 'content-type: app
 - `src/lib/api/quotes.test.ts`: topes del borrador y reintento cuando el número choca.
 - `src/lib/api/mutations/write-routes.test.ts`: las rutas de escritura de punta a punta con una BD en memoria: 401 y
   403 (también fases sin `presupuestos`), 400/422, 409 por versión y por estado fijado (sin cambiar nada), 404,
-  registro con el nombre de la app, que no hay `DELETE` y las funciones comunes que usan la web y el MCP.
+  registro con el nombre de la app, que no hay `DELETE`, que una clave solo de escritura no lee nada (403), 503 si la
+  transacción no termina y las funciones comunes que usan la web y el MCP.
+- `bun run test:bd` (`scripts/prueba-concurrencia-api.ts`, aparte de `bun test`): concurrencia real contra la BD
+  local de desarrollo (se niega a correr con otra). 8 cambios simultáneos con la misma versión en un cliente, un
+  proyecto y una fase: gana uno y el resto da conflicto; 8 altas con el mismo nombre: una y el resto `duplicate`.
+  Sin el `FOR UPDATE`, falla. Crea sus datos y los borra al terminar.
 - `src/lib/api/events.test.ts`: días de la agenda en Europe/Madrid, también en los cambios de hora y con otra zona
   en el proceso.

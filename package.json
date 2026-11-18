@@ -10,6 +10,7 @@
     "start": "next start -p 3099",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:bd": "bun scripts/prueba-concurrencia-api.ts",
     "postinstall": "prisma generate",
     "db:push": "bunx prisma db push",
     "db:migrate": "bunx prisma migrate dev",

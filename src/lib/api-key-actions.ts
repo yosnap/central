@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { generateApiKey } from './api/keys'
-import { GRANTABLE_SCOPES } from './api/scopes'
+import { GRANTABLE_SCOPES, withImpliedScopes } from './api/scopes'
 
 const CreateKey = z.object({
   name: z.string().trim().min(1, 'Ponle un nombre').max(80),
@@ -20,7 +20,7 @@ export async function createApiKey(form: FormData): Promise<{ key: string; prefi
   const d = CreateKey.safeParse({ name: form.get('name'), scopes: [...new Set(form.getAll('scopes').map(String))] })
   if (!d.success) return { error: d.error.issues[0]?.message ?? 'Datos no válidos' }
   const { key, prefix, hash } = generateApiKey()
-  await prisma.apiKey.create({ data: { name: d.data.name, scopes: d.data.scopes, prefix, hash } })
+  await prisma.apiKey.create({ data: { name: d.data.name, scopes: withImpliedScopes(d.data.scopes), prefix, hash } })
   revalidatePath('/ajustes')
   return { key, prefix }
 }

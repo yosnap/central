@@ -3,6 +3,7 @@
  * Los fallos internos devuelven un 500 genérico; el registro solo lleva la ruta y el mensaje, nunca cabeceras.
  */
 import { z } from 'zod'
+import { Prisma } from '../../generated/prisma/client'
 import { apiError, requireApiKey, type ApiCaller } from './auth'
 import type { ApiScope } from './keys'
 import { MUTATION_STATUS, MutationError } from './mutations/errors'
@@ -21,6 +22,14 @@ export function json(data: unknown, init: ResponseInit = {}): Response {
   return Response.json(scrubDeep(data, { paths: false }), { ...init, headers: { 'cache-control': 'no-store', ...init.headers } })
 }
 
+/**
+ * Fallos pasajeros de una transacción: tiempo de espera o transacción cerrada (P2028), conflicto de escritura o
+ * interbloqueo (P2034) y espera de conexión agotada (P2024). Se responden con 503 y `Retry-After`, nunca 500.
+ */
+export function isTransientDbError(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && ['P2024', 'P2028', 'P2034'].includes(e.code)
+}
+
 export function apiRoute<P = Record<string, never>>(scope: ApiScope | readonly ApiScope[] | null, handler: Handler<P>, auth: Auth = requireApiKey) {
   return async (req: Request, ctx: { params: Promise<P> }): Promise<Response> => {
     try {
@@ -32,6 +41,10 @@ export function apiRoute<P = Record<string, never>>(scope: ApiScope | readonly A
       if (e instanceof ApiInputError) return apiError(e.status, 'invalid', { detail: e.message })
       if (e instanceof MutationError) {
         return json({ error: e.code, detail: e.message, ...(e.current === undefined ? {} : { current: e.current }) }, { status: MUTATION_STATUS[e.code] })
+      }
+      if (isTransientDbError(e)) {
+        console.error(`[api] ${req.method} ${new URL(req.url).pathname}: transacción sin terminar (${(e as { code: string }).code})`)
+        return apiError(503, 'busy', { detail: 'Central está ocupada con otro cambio: vuelve a intentarlo en unos segundos' }, { 'retry-after': '2' })
       }
       console.error(`[api] ${req.method} ${new URL(req.url).pathname}: ${e instanceof Error ? e.message : 'error'}`)
       return apiError(500, 'internal')

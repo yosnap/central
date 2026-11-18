@@ -70,7 +70,7 @@ const fase = await import('../../../app/api/v1/presupuestos/[id]/fases/[faseId]/
 const { updateClient } = await import('./clients')
 const { updateQuotePhase } = await import('./quote-phases')
 
-const keys = { lectura: generateApiKey(), escritura: generateApiKey(), todo: generateApiKey() }
+const keys = { lectura: generateApiKey(), escritura: generateApiKey(), todo: generateApiKey(), soloEscritura: generateApiKey() }
 
 function seed() {
   seq = 0
@@ -79,6 +79,7 @@ function seed() {
     apiKey: [
       { id: 'k-lectura', name: 'Lectora', prefix: keys.lectura.prefix, hash: keys.lectura.hash, scopes: ['lectura'], revokedAt: null, lastUsedAt: null },
       { id: 'k-escritura', name: 'AgoraOne', prefix: keys.escritura.prefix, hash: keys.escritura.hash, scopes: ['lectura', 'escritura'], revokedAt: null, lastUsedAt: null },
+      { id: 'k-solo-escritura', name: 'Antigua', prefix: keys.soloEscritura.prefix, hash: keys.soloEscritura.hash, scopes: ['escritura'], revokedAt: null, lastUsedAt: null },
       { id: 'k-todo', name: 'AgoraOne completa', prefix: keys.todo.prefix, hash: keys.todo.hash, scopes: ['lectura', 'escritura', 'presupuestos'], revokedAt: null, lastUsedAt: null },
     ],
     client: [{ id: 'c1', name: 'Acme', company: null, email: 'hola@acme.es', phone: null, taxId: null, address: null, createdAt: at, updatedAt: at }],
@@ -128,6 +129,21 @@ describe('permisos', () => {
       expect(db.apiChange).toHaveLength(0)
     })
   }
+
+  test('escritura sin lectura: 403 por lectura, también con una versión vieja (no devuelve la ficha en un 409)', async () => {
+    for (const [name, fn, method, params] of writes) {
+      const r = await call(fn, method, '/x', { key: keys.soloEscritura.key, body: { version: 'a'.repeat(20), phone: '1', name: 'X', body: 'x', clientId: 'c1' }, params })
+      expect([name, r.status, r.json.scope, 'current' in r.json]).toEqual([name, 403, 'lectura', false])
+    }
+    expect(db.apiChange).toHaveLength(0)
+  })
+
+  test('al crear una clave, escritura lleva siempre lectura', async () => {
+    const { withImpliedScopes } = await import('../scopes')
+    expect(withImpliedScopes(['escritura'])).toEqual(['lectura', 'escritura'])
+    expect(withImpliedScopes(['presupuestos', 'escritura', 'escritura'])).toEqual(['lectura', 'presupuestos', 'escritura'])
+    expect(withImpliedScopes(['presupuestos'])).toEqual(['presupuestos'])
+  })
 
   test('las fases piden además el permiso de presupuestos', async () => {
     const r = await call(fase.PATCH as RouteFn, 'PATCH', '/x', { key: W, body: { version: 'a'.repeat(20), status: 'DONE' }, params: { id: 'q1', faseId: 'f1' } })
@@ -210,9 +226,17 @@ describe('notas', () => {
     expect(db.apiChange[0]).toMatchObject({ entity: 'note', keyName: 'AgoraOne' })
   })
 
-  test('422 sin destino, con dos destinos o con uno que no existe', async () => {
-    for (const body of [{ body: 'x' }, { body: 'x', clientId: 'c1', projectId: 'p1' }, { body: 'x', websiteId: 'w9' }, { body: '', clientId: 'c1' }]) {
+  test('422 sin destino, con dos destinos o vacía', async () => {
+    for (const body of [{ body: 'x' }, { body: 'x', clientId: 'c1', projectId: 'p1' }, { body: '', clientId: 'c1' }]) {
       expect((await call(notas.POST as RouteFn, 'POST', '/notas', { key: W, body })).status).toBe(422)
+    }
+    expect(db.note).toHaveLength(0)
+  })
+
+  test('404 con un destino que no existe o con un proyecto excluido (como si no existiera)', async () => {
+    for (const body of [{ body: 'x', websiteId: 'w9' }, { body: 'x', clientId: 'c9' }, { body: 'x', projectId: 'p3' }]) {
+      const r = await call(notas.POST as RouteFn, 'POST', '/notas', { key: W, body })
+      expect([JSON.stringify(body), r.status, r.json.error]).toEqual([JSON.stringify(body), 404, 'not_found'])
     }
     expect(db.note).toHaveLength(0)
   })
@@ -279,5 +303,20 @@ describe('fases de presupuesto', () => {
     expect(invoiced.completedAt).toEqual(done.completedAt)
     expect((await updateQuotePhase('f1', { status: 'PENDING' })).completedAt).toBeNull()
     expect(db.apiChange).toHaveLength(0)
+  })
+})
+
+describe('base de datos ocupada', () => {
+  test('un tiempo de espera o conflicto de la transacción (P2028, P2034) da 503 con Retry-After, nunca 500', async () => {
+    const { Prisma } = await import('../../../generated/prisma/client')
+    const original = fakePrisma.$transaction
+    try {
+      for (const code of ['P2028', 'P2034']) {
+        fakePrisma.$transaction = async () => { throw new Prisma.PrismaClientKnownRequestError('Transaction already closed', { code, clientVersion: 'prueba' }) }
+        const req = new Request('http://localhost:3099/api/v1/clientes', { method: 'POST', headers: { authorization: `Bearer ${W}`, 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Ocupada' }) })
+        const res = await (clientes.POST as RouteFn)(req, { params: Promise.resolve({}) })
+        expect([code, res.status, res.headers.get('retry-after'), ((await res.json()) as Row).error]).toEqual([code, 503, '2', 'busy'])
+      }
+    } finally { fakePrisma.$transaction = original }
   })
 })

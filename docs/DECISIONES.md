@@ -92,7 +92,7 @@ Otras apps (AgoraOne en macOS, Windows y Linux, con Central en producción) nece
 ## 2026-11-18 · Escrituras por la API v1: crear y cambiar con versión, nunca borrar
 El usuario decidió que desde AgoraOne se puede crear y cambiar en Central (clientes, notas, estado y fase de
 proyectos, fases de presupuestos), siempre tras ver el cambio exacto y confirmarlo, y que nunca se borra. Por eso la
-API solo tiene `POST` y `PATCH` (sin `DELETE`), con el permiso `escritura` (y `presupuestos` para las fases). La
+API solo tiene `POST` y `PATCH` (sin `DELETE`), con el permiso `escritura` (y `presupuestos` para las fases). `escritura` implica `lectura`, porque una escritura devuelve la entidad y un conflicto, la actual. La
 concurrencia es optimista con una `version` que es la huella de los campos editables y no `updatedAt`: el escáner
 reescribe los proyectos cada hora y daría conflictos falsos, y una huella no depende de los milisegundos. La versión
 se comprueba con la fila bloqueada en la misma transacción que escribe. Un estado fijado a mano (`statusLocked`) no se
