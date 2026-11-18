@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 — 2026-11-18
+
+- Servidores: un servicio de Swarm a 0/N cuya última tarea terminó bien (migraciones con reinicio solo si fallan, replicated-job) sale como «Completada» en gris y ya no cuenta como caído ni pone el servidor en rojo; si la tarea falla, sigue saliendo «Caído». Los contenedores que salieron con código 0 también salen como «Completada».
+- `recoger-root.sh` pasa a la versión 5 (marca esas tareas): la ficha de cada servidor ofrece actualizarlo.
+
 ## 0.5.0 — 2026-11-18
 
 - API v1 para apps conectadas (`/api/v1`, [docs/API.md](docs/API.md)): estado, clientes con su contacto, proyectos paginados, webs, servidores (sin direcciones ni IPs), alertas, pendientes, agenda, presupuestos con su PDF y Word, tarifas y alta de presupuestos en borrador.
