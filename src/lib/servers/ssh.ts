@@ -37,7 +37,7 @@ export function sshArgs(t: SshTarget) {
 }
 
 export function runCollect(t: SshTarget): Promise<SshResult> {
-  if (!existsSync(expandHome(t.keyPath))) return Promise.resolve({ ok: false, error: `falta la clave ${t.keyPath}`, rejected: true })
+  if (!existsSync(expandHome(t.keyPath))) return Promise.resolve({ ok: false, error: 'falta la clave SSH', rejected: true })
   return new Promise((resolve) => {
     // grupo propio para poder cortar ssh y lo que cuelgue de él
     const child = spawn('ssh', sshArgs(t), { stdio: ['ignore', 'pipe', 'pipe'], detached: true })

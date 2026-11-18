@@ -5,11 +5,11 @@ import { z } from 'zod'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { generateApiKey } from './api/keys'
-import { API_SCOPES } from './api/scopes'
+import { GRANTABLE_SCOPES } from './api/scopes'
 
 const CreateKey = z.object({
   name: z.string().trim().min(1, 'Ponle un nombre').max(80),
-  scopes: z.array(z.enum(API_SCOPES)).min(1, 'Elige al menos un permiso'),
+  scopes: z.array(z.enum(GRANTABLE_SCOPES, 'Ese permiso todavía no se puede conceder')).min(1, 'Elige al menos un permiso'),
 })
 
 /**

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { QUOTE_STATUSES, createQuote, createQuoteSchema, listQuotes } from '@/lib/api/quotes'
+import { QUOTE_STATUSES, createQuote, createQuoteSchema, isNumberClash, listQuotes } from '@/lib/api/quotes'
 import { ApiInputError, apiRoute, body, json, query } from '@/lib/api/route'
 
 export const dynamic = 'force-dynamic'
@@ -15,7 +15,11 @@ export const GET = apiRoute('presupuestos', async (req) => {
 /** Crea un presupuesto, siempre en borrador, con el siguiente número del año. Mismo esquema que `create_quote` del MCP. */
 export const POST = apiRoute('presupuestos', async (req) => {
   const input = await body(req, createQuoteSchema)
-  const r = await createQuote(input)
+  let r: Awaited<ReturnType<typeof createQuote>>
+  try { r = await createQuote(input) } catch (e) {
+    if (isNumberClash(e)) throw new ApiInputError('Hay muchas altas a la vez; vuelve a intentarlo', 409)
+    throw e
+  }
   if (!r.ok) throw new ApiInputError('No existe ese cliente en Central', 422)
   return json({ id: r.id, number: r.number, status: 'DRAFT' }, { status: 201 })
 })

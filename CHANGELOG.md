@@ -3,7 +3,10 @@
 ## 0.5.0 — 2026-11-18
 
 - API v1 para apps conectadas (`/api/v1`, [docs/API.md](docs/API.md)): estado, clientes con su contacto, proyectos paginados, webs, servidores (sin direcciones ni IPs), alertas, pendientes, agenda, presupuestos con su PDF y Word, tarifas y alta de presupuestos en borrador.
-- Ajustes › Apps conectadas: claves por app con permisos (lectura, presupuestos y escritura, esta reservada), que se ven una sola vez al crearlas, con su último uso y revocables. Se guardan como SHA-256; límite de 120 peticiones por minuto y clave.
+- Ajustes › Apps conectadas: claves por app con permisos (lectura y presupuestos; escritura llegará con sus rutas), que se ven una sola vez al crearlas, con su último uso y revocables. Se guardan como SHA-256; límite de 120 peticiones por minuto y clave, para todas las rutas juntas.
+- La API nunca da IPs (tampoco dentro de un dominio sslip.io), la URL del panel ni rutas de clave; la agenda cuenta los días en Europe/Madrid; altas simultáneas de presupuestos reciben números distintos.
+- Servidores: si falta la clave SSH, el aviso dice «falta la clave SSH» sin su ruta.
+- `create_quote` (MCP y API) rechaza importes negativos o fuera de rango y listas o textos desmedidos.
 - El MCP usa las mismas consultas que la API (`src/lib/api/`), con la misma salida que antes.
 - `bun test` con las pruebas de la autenticación de la API.
 

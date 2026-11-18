@@ -1,5 +1,6 @@
 /** Presupuestos y tarifas: consultas y alta de borradores comunes de la API v1 y el MCP. Importes en euros. */
 import { z } from 'zod'
+import { Prisma } from '../../generated/prisma/client'
 import { prisma } from '../prisma'
 import { newQuoteNumber } from '../quote-number'
 import { decimal, phaseAmounts, quoteTotals, visibleStatus } from '../quotes'
@@ -38,21 +39,28 @@ export async function getQuote(id: string) {
 }
 
 const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+/** Máximo de las columnas `Decimal(10, 2)` de importes y cantidades. */
+export const MAX_AMOUNT = 99_999_999.99
+const amount = () => z.number().min(0).max(MAX_AMOUNT)
+const lines = (what: string) => z.array(z.string().max(1000)).max(50).optional().describe(what)
 
-/** Campos de un borrador nuevo (el MCP los usa como `inputSchema`; la API, como `z.object`). */
+/**
+ * Campos de un borrador nuevo (el MCP los usa como `inputSchema`; la API, como `z.object`). Con topes de importe,
+ * de elementos y de longitud para que una entrada imposible sea un error de validación y no un fallo de la BD.
+ */
 export const createQuoteShape = {
-  client: z.string().describe('Nombre exacto o id del cliente (debe existir)'),
+  client: z.string().min(1).max(200).describe('Nombre exacto o id del cliente (debe existir)'),
   title: z.string().min(1).max(200),
   items: z.array(z.object({
     description: z.string().min(1).max(500).describe('Nombre de la fase o paquete'), details: z.string().max(3000).optional(),
-    unitPrice: z.number().describe('Precio, o mínimo si es variable'), priceMax: z.number().optional().describe('Máximo si el precio es variable'),
-    quantity: z.number().min(0).default(1), unit: z.string().max(30).optional(),
-  })).min(1),
-  phases: z.array(z.object({ name: z.string().min(1).max(200), percent: z.number().min(0).max(100).optional(), dueDate: day.optional() })).optional().describe('Hitos de pago (forma de pago)'),
+    unitPrice: amount().describe('Precio, o mínimo si es variable'), priceMax: amount().optional().describe('Máximo si el precio es variable'),
+    quantity: amount().default(1), unit: z.string().max(30).optional(),
+  }).refine((i) => i.priceMax == null || i.priceMax >= i.unitPrice, { message: 'priceMax no puede ser menor que unitPrice', path: ['priceMax'] })).min(1).max(100),
+  phases: z.array(z.object({ name: z.string().min(1).max(200), percent: z.number().min(0).max(100).optional(), dueDate: day.optional() })).max(50).optional().describe('Hitos de pago (forma de pago)'),
   scope: z.string().max(10000).optional().describe('Objeto y alcance'),
-  includes: z.array(z.string()).optional(), excludes: z.array(z.string()).optional(), assumptions: z.array(z.string()).optional(),
+  includes: lines('Qué incluye'), excludes: lines('Qué no incluye'), assumptions: lines('Supuestos y condiciones'),
   thirdPartyCosts: z.string().max(5000).optional(),
-  schedule: z.array(z.object({ when: z.string(), what: z.string() })).optional().describe('Cronograma'),
+  schedule: z.array(z.object({ when: z.string().max(200), what: z.string().max(1000) })).max(50).optional().describe('Cronograma'),
   vat: z.number().min(0).max(100).optional().describe('IVA en %; por defecto el de Ajustes'),
   notes: z.string().max(5000).optional(),
   validDays: z.number().int().min(1).max(365).default(30),
@@ -66,15 +74,37 @@ export async function createQuote({ client, title, items, phases = [], vat, note
   const c = await prisma.client.findFirst({ where: { OR: [{ id: client }, { name: { equals: client, mode: 'insensitive' } }] } })
   if (!c) return { ok: false, error: 'client_not_found' } as const
   const brand = await prisma.brandSettings.findUnique({ where: { id: 'default' }, select: { defaultVat: true } })
-  const q = await prisma.quote.create({
-    data: {
-      number: await newQuoteNumber(), title, clientId: c.id, notes, vat: vat ?? brand?.defaultVat ?? 21, validUntil: new Date(Date.now() + validDays * 864e5),
-      scope, includes, excludes, assumptions, thirdPartyCosts, schedule,
-      items: { create: items.map((i, position) => ({ ...i, position })) },
-      phases: { create: phases.map((p, position) => ({ name: p.name, percent: p.percent, dueDate: p.dueDate ? new Date(`${p.dueDate}T12:00:00Z`) : undefined, position })) },
-    },
-  })
-  return { ok: true, id: q.id, number: q.number } as const
+  const data = {
+    title, clientId: c.id, notes, vat: vat ?? brand?.defaultVat ?? 21, validUntil: new Date(Date.now() + validDays * 864e5),
+    scope, includes, excludes, assumptions, thirdPartyCosts, schedule,
+    items: { create: items.map((i, position) => ({ ...i, position })) },
+    phases: { create: phases.map((p, position) => ({ name: p.name, percent: p.percent, dueDate: p.dueDate ? new Date(`${p.dueDate}T12:00:00Z`) : undefined, position })) },
+  }
+  // El número sale de leer los del año. Las altas por la API se ponen en fila con un cerrojo de Postgres que dura lo que
+  // la transacción; si aun así choca con un alta de la web o del MCP (que no lo toman), el índice único lo rechaza y
+  // se repite con el siguiente número.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const q = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${QUOTE_NUMBER_LOCK})`
+        return tx.quote.create({ data: { ...data, number: await newQuoteNumber(tx) } })
+      })
+      return { ok: true, id: q.id, number: q.number } as const
+    } catch (e) {
+      if (attempt >= NUMBER_ATTEMPTS || !isNumberClash(e)) throw e
+    }
+  }
+}
+
+const NUMBER_ATTEMPTS = 5
+/** Identificador del cerrojo de numeración de presupuestos (pg_advisory_xact_lock). */
+const QUOTE_NUMBER_LOCK = 7_310_001
+
+/** Choque del índice único de `Quote.number` (P2002). */
+export function isNumberClash(e: unknown): boolean {
+  if (!(e instanceof Prisma.PrismaClientKnownRequestError) || e.code !== 'P2002') return false
+  const target = (e.meta as { target?: unknown } | undefined)?.target
+  return Array.isArray(target) ? target.includes('number') : typeof target === 'string' ? target.includes('number') : true
 }
 
 /** Tarifas en uso, para rellenar un borrador. Precio sin IVA en euros. */

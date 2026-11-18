@@ -19,8 +19,10 @@ export async function pickedCalendars() {
 export async function agenda(from: Date, to: Date) {
   const cals = await pickedCalendars()
   const errors: string[] = []
+  /** Calendarios que no se han podido leer, para quien no debe ver el mensaje de Google (la API v1). */
+  const failed: string[] = []
   const lists = await Promise.all(cals.map(async (c) => {
-    try { return (await listEvents(c.connectionId, c.calendarId, from, to)).map((e) => ({ c, e })) } catch (err) { errors.push(`${c.name}: ${(err as Error).message}`); return [] }
+    try { return (await listEvents(c.connectionId, c.calendarId, from, to)).map((e) => ({ c, e })) } catch (err) { errors.push(`${c.name}: ${(err as Error).message}`); failed.push(c.name); return [] }
   }))
   const flat = lists.flat()
   const links = flat.length ? await prisma.calendarEventLink.findMany({
@@ -38,5 +40,5 @@ export async function agenda(from: Date, to: Date) {
   }).sort((a, b) => a.start.getTime() - b.start.getTime())
   // el mismo evento compartido en dos calendarios elegidos sale una vez
   const seen = new Set<string>()
-  return { events: events.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), errors, calendars: cals }
+  return { events: events.filter((e) => (seen.has(e.id) ? false : (seen.add(e.id), true))), errors, failed, calendars: cals }
 }

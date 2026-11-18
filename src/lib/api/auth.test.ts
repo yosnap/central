@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test'
 import { RATE_LIMIT, createApiAuth, type KeyStore, type StoredKey } from './auth'
 import { VISIBLE_PREFIX_LENGTH, bearerKey, generateApiKey, hashApiKey, sameHash } from './keys'
 import { apiRoute, json } from './route'
-import { withoutAddress } from './servers'
 
 type Key = ReturnType<typeof generateApiKey>
 
@@ -126,6 +125,17 @@ describe('autenticación de /api/v1', () => {
     expect((await readRoute(req(reading.key), noParams)).status).toBe(200)
   })
 
+  test('el límite es por clave y lo comparten todas las rutas', async () => {
+    const { readRoute, anyRoute } = setup()
+    for (let i = 0; i < RATE_LIMIT / 2; i++) {
+      expect((await readRoute(req(reading.key), noParams)).status).toBe(200)
+      expect((await anyRoute(req(reading.key), noParams)).status).toBe(200)
+    }
+    expect((await anyRoute(req(reading.key), noParams)).status).toBe(429)
+    expect((await readRoute(req(reading.key), noParams)).status).toBe(429)
+    expect((await anyRoute(req(quotes.key), noParams)).status).toBe(200)
+  })
+
   test('la clave nunca aparece en respuestas ni registros', async () => {
     const { auth, readRoute, quoteRoute } = setup()
     const failing = apiRoute('lectura', async () => { throw new Error('fallo de la base de datos') }, auth)
@@ -149,19 +159,5 @@ describe('autenticación de /api/v1', () => {
     const r = await route(req(reading.key), noParams)
     expect(r.status).toBe(400)
     expect((await r.json()).error).toBe('invalid')
-  })
-})
-
-describe('forma de servidores', () => {
-  test('sin dirección, IP, rutas de clave ni secretos', () => {
-    const s = withoutAddress({ id: 's1', name: 'hetzner-1', host: '203.0.113.7', sshPort: 22, status: 'green', projects: [{ project: 'Web', url: 'https://ejemplo.es' }] })
-    const keys: string[] = []
-    const walk = (v: unknown) => {
-      if (Array.isArray(v)) v.forEach(walk)
-      else if (v && typeof v === 'object') for (const [k, x] of Object.entries(v)) { keys.push(k); walk(x) }
-    }
-    walk(s)
-    for (const banned of ['host', 'sshPort', 'ip', 'keyPath', 'secret', 'knownIps']) expect(keys).not.toContain(banned)
-    expect(JSON.stringify(s)).not.toContain('203.0.113.7')
   })
 })

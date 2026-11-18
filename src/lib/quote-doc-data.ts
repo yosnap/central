@@ -18,10 +18,10 @@ export async function loadQuoteDoc(id: string) {
   return loadQuoteDocData(id)
 }
 
-/** Sin comprobar sesión: la llamada ya está autorizada (la web con su cookie o la API v1 con una clave). */
+/** Sin comprobar sesión: la llamada ya está autorizada (la web con su cookie o la API v1 con una clave). Por id o número. */
 export async function loadQuoteDocData(id: string) {
   const [q, brand] = await Promise.all([
-    prisma.quote.findUnique({ where: { id }, include: { client: true, items: { orderBy: [{ position: 'asc' }, { id: 'asc' }] }, phases: { orderBy: [{ position: 'asc' }, { id: 'asc' }] } } }),
+    prisma.quote.findFirst({ where: { OR: [{ id }, { number: id }] }, include: { client: true, items: { orderBy: [{ position: 'asc' }, { id: 'asc' }] }, phases: { orderBy: [{ position: 'asc' }, { id: 'asc' }] } } }),
     prisma.brandSettings.findUnique({ where: { id: 'default' } }),
   ])
   if (!q) return { error: new Response('No existe', { status: 404 }) } as const

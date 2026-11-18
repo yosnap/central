@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from 'react'
 import { unstable_rethrow } from 'next/navigation'
 import { Copy, KeyRound, Loader2 } from 'lucide-react'
 import { createApiKey } from '@/lib/api-key-actions'
-import { API_SCOPES, SCOPE_LABEL } from '@/lib/api/scopes'
+import { GRANTABLE_SCOPES, SCOPE_LABEL } from '@/lib/api/scopes'
 import { Button, Checkbox, Field, Input, Notice, toast } from '@/components/ui'
 
 /** Alta de una clave. La clave completa se muestra una sola vez, aquí, hasta que se oculta o se sale de la página. */
@@ -47,7 +47,8 @@ export function ApiKeyCreateForm() {
         <Field label="App" htmlFor="ak-name"><Input id="ak-name" name="name" placeholder="AgoraOne en el Mac" maxLength={80} required /></Field>
         <fieldset className="flex flex-col gap-2">
           <legend className="mb-1 text-base font-medium">Permisos</legend>
-          {API_SCOPES.map((s) => <Checkbox key={s} name="scopes" value={s} label={SCOPE_LABEL[s]} defaultChecked={s === 'lectura'} />)}
+          {GRANTABLE_SCOPES.map((s) => <Checkbox key={s} name="scopes" value={s} label={SCOPE_LABEL[s]} defaultChecked={s === 'lectura'} />)}
+          <p className="text-sm text-muted">Escritura: todavía no disponible; se podrá conceder cuando existan sus rutas.</p>
         </fieldset>
         <Button type="submit" disabled={pending} aria-busy={pending}>
           {pending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <KeyRound className="size-5" aria-hidden />}

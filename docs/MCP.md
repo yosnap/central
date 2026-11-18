@@ -14,7 +14,7 @@
 | `get_server` | Ficha de un servidor: tarjetas, comprobaciones con su arreglo, contenedores, dominios del proxy y proyectos |
 | `list_quotes` | Presupuestos con cliente, estado visible y total con IVA; filtra por cliente o estado |
 | `get_quote` | Un presupuesto (por id o número) con partidas, base, IVA, total y fases con su importe |
-| `create_quote` | Crea un presupuesto en borrador: fases o paquetes (fijos o con rango), hitos de pago y secciones (cliente existente, siguiente número del año) |
+| `create_quote` | Crea un presupuesto en borrador: fases o paquetes (fijos o con rango), hitos de pago y secciones (cliente existente, siguiente número del año; importes de 0 a 99.999.999,99 y listas con tope, como en la API) |
 | `update_phase` | Cambia el estado o la fecha de una fase |
 | `search_messages` | Correos guardados (por texto o cliente); con `live`, también búsqueda en Gmail |
 | `list_events` | Eventos de la agenda entre dos fechas, con el cliente o proyecto ligado |

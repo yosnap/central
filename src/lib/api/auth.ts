@@ -29,9 +29,20 @@ export function apiError(status: number, error: string, extra: Record<string, st
 
 const unauthorized = () => apiError(401, 'unauthorized', {}, { 'www-authenticate': 'Bearer' })
 
-/** Crea el comprobador con su almacén y su propio límite en memoria (uno por proceso). */
-export function createApiAuth(store: KeyStore, now: () => number = Date.now) {
-  const windows = new Map<string, { start: number; count: number }>()
+type Windows = Map<string, { start: number; count: number }>
+
+/**
+ * Ventanas del límite de la app: una sola por proceso, en `globalThis`, para que las 16 rutas cuenten juntas aunque
+ * Next empaquete cada ruta por separado o recargue módulos en desarrollo.
+ */
+function sharedWindows(): Windows {
+  const g = globalThis as unknown as { __centralApiWindows?: Windows }
+  g.__centralApiWindows ??= new Map()
+  return g.__centralApiWindows
+}
+
+/** Crea el comprobador con su almacén y sus ventanas del límite (por clave, para todas las rutas que lo usen). */
+export function createApiAuth(store: KeyStore, now: () => number = Date.now, windows: Windows = new Map()) {
 
   function overLimit(id: string): number | null {
     const t = now()
@@ -74,4 +85,4 @@ const prismaStore: KeyStore = {
 }
 
 /** Comprobador de la app, con las claves de la BD. */
-export const requireApiKey = createApiAuth(prismaStore)
+export const requireApiKey = createApiAuth(prismaStore, Date.now, sharedWindows())
