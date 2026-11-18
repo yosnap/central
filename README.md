@@ -62,10 +62,14 @@ variables y datos de producción) están en [CLAUDE.md](CLAUDE.md).
 
 Herramientas y uso en [docs/MCP.md](docs/MCP.md).
 
+## API para apps conectadas
+
+Otras apps (AgoraOne…) leen Central por `/api/v1` con una clave creada en Ajustes → Apps conectadas. Rutas, permisos y ejemplos en [docs/API.md](docs/API.md).
+
 ## Documentación
 
 - [Visión](docs/VISION.md) y [hoja de ruta](docs/ROADMAP.md)
 - [Arquitectura](docs/ARQUITECTURA.md), [modelo de datos](docs/MODELO-DATOS.md) y [decisiones](docs/DECISIONES.md)
 - [Escáner](docs/ESCANER.md), [servidores y uptime](docs/SERVIDORES.md) e [integraciones](docs/INTEGRACIONES.md)
-- [Interfaz](docs/UI.md) y [MCP](docs/MCP.md)
+- [Interfaz](docs/UI.md), [MCP](docs/MCP.md) y [API v1](docs/API.md)
 - Cambios por versión en [CHANGELOG.md](CHANGELOG.md)

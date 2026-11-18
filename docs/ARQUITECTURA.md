@@ -17,6 +17,7 @@
 - **Escáner**: corre en el Mac (donde están las carpetas). Lee metadatos, nunca contenido sensible. Con Central en el Mac escribe directamente en la BD; con Central en producción lo hace el trabajador del Mac y sube el resultado.
 - **Uptime**: propio, sin dependencia de Screpy. Cada comprobación guarda un `UptimeCheck`; se conservan 30 días. Disparado por cron HTTP o `bun run uptime`.
 - **MCP**: servidor stdio que usa el mismo cliente Prisma. Pensado para ejecutarse en el Mac apuntando a la BD.
+- **API v1** (`/api/v1`): HTTP JSON para otras apps (AgoraOne) con claves por app y permisos, creadas en Ajustes. Las consultas viven en `src/lib/api/` y las comparte con el MCP. Detalle en [API.md](API.md).
 
 ## Despliegue (Dokploy · Sn4p.dev, central.sn4p.dev)
 

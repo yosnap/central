@@ -34,4 +34,4 @@
 }
 ```
 
-Siguiente paso previsto: transporte HTTP con token para usarlo como conector remoto.
+Las consultas de lectura y `create_quote` viven en `src/lib/api/` y las comparte la [API v1](API.md), que es la vía para otras apps (HTTP, claves con permisos, paginación y ficheros). Un MCP por HTTP, si hace falta, irá encima de esa misma capa.

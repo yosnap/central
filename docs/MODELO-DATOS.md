@@ -46,6 +46,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `MailAccount` | 3 | Buzón de una cuenta conectada (hoy Gmail y Workspace), ligado a su `IntegrationConnection` (`connectionId`), donde están los tokens cifrados |
 | `SavedMessage` | 3 | Correo importante guardado desde Gmail: remitente, destinatarios, asunto, texto (`body`), hilo (`threadId`), fecha, y cliente o proyecto ligado. Se conserva aunque se borre en Gmail |
 | `CalendarEventLink` | 3 | Evento de Google Calendar ligado a un cliente o proyecto (cuenta, calendario, id del evento, título y fechas en caché para las fichas y el MCP) |
+| `ApiKey` | API v1 | Clave de una app conectada (Ajustes → Apps conectadas): nombre, `prefix` visible, `hash` SHA-256 de la clave (la clave nunca se guarda), `scopes` (`lectura`, `presupuestos`, `escritura`), creación, último uso y `revokedAt` (revocar no borra). Ver [API.md](API.md) |
 
 ## Reglas de estado de proyecto
 

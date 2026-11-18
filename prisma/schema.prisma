@@ -849,3 +849,20 @@ model WorkerBeat {
   roots      String[] // carpetas que el Mac deja escanear (CENTRAL_WORKER_ROOTS)
   adminKey   String?  // clave pública de administración de Central en el Mac (para mostrarla en producción)
 }
+
+// ───────── Apps conectadas ─────────
+
+// Clave de acceso a la API v1 (/api/v1) para otra app (AgoraOne…). La clave completa solo se ve al crearla:
+// aquí se guarda su huella SHA-256 y un prefijo para reconocerla. Revocar no borra: deja de valer.
+model ApiKey {
+  id         String    @id @default(cuid())
+  name       String
+  prefix     String    // primeros caracteres de la clave, visibles en Ajustes
+  hash       String    @unique // SHA-256 (hex) de la clave completa
+  scopes     String[]  // lectura | presupuestos | escritura
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([prefix])
+}

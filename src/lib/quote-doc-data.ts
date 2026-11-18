@@ -12,8 +12,14 @@ export type DocArt = {
   watermark: { data: Buffer; width: number; height: number } | null
 }
 
+/** Para la web: exige la sesión de Central. */
 export async function loadQuoteDoc(id: string) {
   if (!verifySession((await cookies()).get(SESSION_COOKIE)?.value)) return { error: new Response('No autorizado', { status: 401 }) } as const
+  return loadQuoteDocData(id)
+}
+
+/** Sin comprobar sesión: la llamada ya está autorizada (la web con su cookie o la API v1 con una clave). */
+export async function loadQuoteDocData(id: string) {
   const [q, brand] = await Promise.all([
     prisma.quote.findUnique({ where: { id }, include: { client: true, items: { orderBy: [{ position: 'asc' }, { id: 'asc' }] }, phases: { orderBy: [{ position: 'asc' }, { id: 'asc' }] } } }),
     prisma.brandSettings.findUnique({ where: { id: 'default' } }),

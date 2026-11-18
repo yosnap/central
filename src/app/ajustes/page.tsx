@@ -12,6 +12,7 @@ import { GoogleCard } from '@/components/settings/google-card'
 import { WorkerCard } from '@/components/settings/worker-card'
 import { isRemote } from '@/lib/worker'
 import { RatesCard } from '@/components/settings/rates-card'
+import { ApiKeysCard } from '@/components/settings/api-keys-card'
 import fs from 'node:fs'
 import { FolderSearch, RefreshCw } from 'lucide-react'
 import { ActionForm, Card, Combobox, ConfirmAction, Empty, Field, Input, Notice, PageTitle, Pill, Select, SubmitButton, Table, toOptions } from '@/components/ui'
@@ -93,6 +94,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         <RatesCard />
 
         <KumaCard />
+
+        <ApiKeysCard />
 
         <ReposCard />
 
