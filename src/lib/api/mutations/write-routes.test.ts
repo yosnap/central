@@ -164,7 +164,8 @@ describe('clientes', () => {
     expect(c).toMatchObject({ name: 'Nueva SL', email: 'a@nueva.es', taxId: 'B12345678', address: null })
     expect(typeof c.version).toBe('string')
     expect(db.apiChange).toEqual([expect.objectContaining({ keyId: 'k-escritura', keyName: 'AgoraOne', action: 'create', entity: 'client', entityId: c.id })])
-    expect((db.apiChange[0].changes as Row).name).toEqual({ from: null, to: 'Nueva SL' })
+    expect(db.apiChange[0].fields).toEqual(['email', 'name', 'taxId'])
+    expect(JSON.stringify(db.apiChange)).not.toMatch(/Nueva SL|a@nueva\.es|B12345678/)
   })
 
   test('alta con un nombre que ya existe (sin distinguir mayúsculas): 409 duplicate', async () => {
@@ -192,7 +193,8 @@ describe('clientes', () => {
     expect(c.phone).toBe('600 000 000')
     expect(c.version).not.toBe(version)
     expect(db.apiChange).toHaveLength(1)
-    expect(db.apiChange[0].changes).toEqual({ phone: { from: null, to: '600 000 000' } })
+    expect(db.apiChange[0].fields).toEqual(['phone'])
+    expect(JSON.stringify(db.apiChange)).not.toContain('600 000 000')
   })
 
   test('con una versión vieja: 409 conflict con el cliente actual y sin cambiar nada', async () => {
@@ -223,7 +225,8 @@ describe('notas', () => {
     const r = await call(notas.POST as RouteFn, 'POST', '/notas', { key: W, body: { body: 'Llamar el lunes', projectId: 'p1' } })
     expect(r.status).toBe(201)
     expect(r.json.note).toMatchObject({ body: 'Llamar el lunes', projectId: 'p1', source: 'api' })
-    expect(db.apiChange[0]).toMatchObject({ entity: 'note', keyName: 'AgoraOne' })
+    expect(db.apiChange[0]).toMatchObject({ entity: 'note', keyName: 'AgoraOne', fields: ['body', 'projectId'] })
+    expect(JSON.stringify(db.apiChange)).not.toContain('Llamar el lunes')
   })
 
   test('422 sin destino, con dos destinos o vacía', async () => {
@@ -266,6 +269,18 @@ describe('proyectos', () => {
     const r = await call(proyecto.PATCH as RouteFn, 'PATCH', '/proyectos/p2', { key: W, params: { id: 'p2' }, body: { version: await version('p2'), phase: null } })
     expect(r.status).toBe(200)
     expect(db.project[1]).toMatchObject({ status: 'ARCHIVED', phase: null })
+  })
+
+  test('archivar o quitar el estado fijado por la API: 422 sin cambiar nada', async () => {
+    const v = await version('p1')
+    const archive = await call(proyecto.PATCH as RouteFn, 'PATCH', '/proyectos/p1', { key: W, params: { id: 'p1' }, body: { version: v, status: 'ARCHIVED', statusLocked: true } })
+    expect(archive.status).toBe(422)
+    expect(archive.json.detail).toContain('Archivar se hace en Central')
+    const unlock = await call(proyecto.PATCH as RouteFn, 'PATCH', '/proyectos/p2', { key: W, params: { id: 'p2' }, body: { version: await version('p2'), status: 'ACTIVE', statusLocked: false } })
+    expect(unlock.status).toBe(422)
+    expect(unlock.json.detail).toContain('se hace en Central')
+    expect(db.project.slice(0, 2).map((p) => [p.status, p.statusLocked])).toEqual([['ACTIVE', false], ['ARCHIVED', true]])
+    expect(db.apiChange).toHaveLength(0)
   })
 
   test('422 con un estado que no existe; 404 con un proyecto excluido', async () => {

@@ -1,7 +1,10 @@
 /**
  * Estado y fase de un proyecto desde la API v1 (`PATCH /proyectos/{id}`).
  * Regla del escáner: con `statusLocked` el escáner no toca el estado; sin él lo recalcula en cada pasada. Por eso
- * cambiar el estado de un proyecto fijado a mano exige decir también qué hacer con `statusLocked` (si no, 409).
+ * cambiar el estado de un proyecto fijado a mano exige mandar también `statusLocked: true` (si no, 409).
+ * Por la API no se archiva (archivar quita el proyecto de auditorías y alertas y borra su monitor de Uptime Kuma) ni
+ * se quita `statusLocked`: sin él, el escáner podría recalcularlo como archivado (copias de seguridad) sin que nadie
+ * lo vea. Las dos cosas se hacen en Central.
  */
 import { z } from 'zod'
 import { prisma } from '../../prisma'
@@ -17,8 +20,8 @@ export type ProjectStatePatch = { status?: ProjectStatusValue; statusLocked?: bo
 
 export const projectPatchSchema = z.strictObject({
   version: z.string().regex(VERSION_PATTERN, 'Versión no válida: usa la de la última lectura'),
-  status: z.enum(PROJECT_STATUSES).optional(),
-  statusLocked: z.boolean().optional(),
+  status: z.enum(PROJECT_STATUSES).refine((s) => s !== 'ARCHIVED', 'Archivar se hace en Central').optional(),
+  statusLocked: z.boolean().refine((v) => v, 'Quitar el estado fijado se hace en Central: el escáner podría archivar el proyecto').optional(),
   phase: z.string().trim().max(PHASE_MAX).nullable().transform((v) => v || null).optional(),
 }).refine((d) => d.status !== undefined || d.statusLocked !== undefined || d.phase !== undefined, 'Indica al menos un campo que cambiar')
 
@@ -42,7 +45,7 @@ export async function updateProjectState(id: string, patch: ProjectStatePatch, o
     if (!cur || cur.excluded) throw new MutationError('not_found', 'Ese proyecto no existe')
     checkVersion(opts.expectedVersion, projectVersion(cur), () => view(cur))
     if (patch.status !== undefined && patch.status !== cur.status && cur.statusLocked && patch.statusLocked === undefined) {
-      throw new MutationError('status_locked', 'El estado de este proyecto está fijado a mano en Central. Para cambiarlo, envía también statusLocked: true para dejarlo fijado o false para que lo vuelva a calcular el escáner', view(cur))
+      throw new MutationError('status_locked', 'El estado de este proyecto está fijado a mano en Central. Para cambiarlo, envía también statusLocked: true (seguirá fijado con el estado nuevo)', view(cur))
     }
     const changes = changesOf(cur, patch)
     if (Object.keys(changes).length === 0) return view(cur)

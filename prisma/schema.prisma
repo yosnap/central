@@ -867,7 +867,7 @@ model ApiKey {
   @@index([prefix])
 }
 
-/// Registro de lo que cambian otras apps por la API v1 (quién, qué y cómo). Solo altas: nunca se edita ni se borra.
+/// Registro de lo que cambian otras apps por la API v1: quién, cuándo, qué entidad y qué campos. Sin valores ni textos.
 model ApiChange {
   id        String   @id @default(cuid())
   keyId     String   // ApiKey.id de la clave que hizo el cambio (las claves no se borran, se revocan)
@@ -875,7 +875,7 @@ model ApiChange {
   action    String   // create | update
   entity    String   // client | project | note | quotePhase
   entityId  String
-  changes   Json     // { campo: { from, to } }
+  fields    String[] // nombres de los campos que cambiaron (nunca sus valores)
   createdAt DateTime @default(now())
 
   @@index([entity, entityId])

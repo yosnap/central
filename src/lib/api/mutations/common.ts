@@ -64,10 +64,13 @@ export async function lockRow(tx: Tx, table: keyof typeof TABLES, id: string): P
 
 export type AuditEntity = 'client' | 'project' | 'note' | 'quotePhase'
 
-/** Apunta en el registro qué cambió una app. Solo en las escrituras de la API. */
+/**
+ * Apunta en el registro qué cambió una app: quién, cuándo, qué entidad y los NOMBRES de los campos. Nunca los
+ * valores (ni antes ni después) ni el texto de una nota: el registro no guarda datos personales. Solo en la API.
+ */
 export async function audit(tx: Tx, actor: ApiActor | undefined, action: 'create' | 'update', entity: AuditEntity, entityId: string, changes: Changes) {
   if (!actor) return
-  await tx.apiChange.create({ data: { keyId: actor.keyId, keyName: actor.keyName, action, entity, entityId, changes: changes as Prisma.InputJsonValue } })
+  await tx.apiChange.create({ data: { keyId: actor.keyId, keyName: actor.keyName, action, entity, entityId, fields: Object.keys(changes).sort() } })
 }
 
 /** Choque de un índice único (P2002). */

@@ -111,22 +111,29 @@ que otro haya cambiado mientras tanto:
 - **Validación estricta** (Zod, `src/lib/api/mutations/`), la misma que usa la web: campos desconocidos, tipos,
   topes de longitud y fechas imposibles dan 422 con el detalle de cada campo. `null` o `""` vacían un campo opcional.
 - **Respuesta limpia**: la entidad tal como queda, con su nueva `version` (sin tokens ni IPs, como todas).
-- **Registro**: cada escritura deja una fila en `ApiChange` con la clave y el nombre de la app, la acción, la
-  entidad y los campos que cambiaron (antes y después). Un `PATCH` que no cambia nada no escribe ni registra.
+- **Registro**: cada escritura deja una fila en `ApiChange` con la fecha, la clave y el nombre de la app, la acción,
+  la entidad y los **nombres** de los campos que cambiaron. Nunca guarda valores (ni antes ni después) ni el texto de
+  una nota, así que no retiene datos personales. Un `PATCH` que no cambia nada no escribe ni registra.
 
 | Ruta | Cuerpo |
 |---|---|
 | `POST clientes` | `name` (obligatorio, hasta 120, único sin distinguir mayúsculas: si ya existe, 409 `duplicate`); opcionales `company` (160), `email` (200, válido), `phone` (40), `taxId` (30), `address` (500) |
 | `PATCH clientes/{id}` | `version` y al menos uno de los campos de arriba |
 | `POST notas` | `body` (1–5000) y exactamente uno de `clientId`, `projectId` o `websiteId`; queda con `source: "api"`. Un destino que no existe, o un proyecto excluido, da 404 |
-| `PATCH proyectos/{id}` | `version` y al menos uno de `status` (ACTIVE, MAINTENANCE, DORMANT, ARCHIVED), `statusLocked` (booleano) y `phase` (texto libre, hasta 80, o `null`). Un proyecto excluido da 404 |
+| `PATCH proyectos/{id}` | `version` y al menos uno de `status` (ACTIVE, MAINTENANCE o DORMANT; ARCHIVED da 422), `statusLocked` (solo `true`; `false` da 422) y `phase` (texto libre, hasta 80, o `null`). Un proyecto excluido da 404 |
 | `PATCH presupuestos/{id}/fases/{faseId}` | `version` y al menos uno de `status` (PENDING, IN_PROGRESS, DONE, INVOICED) y `dueDate` (AAAA-MM-DD o `null`). Al pasar a DONE o INVOICED se apunta `completedAt` (de hecha a facturada se conserva); al volver atrás, se borra. La fase tiene que ser de ese presupuesto (id o número); si no, 404 |
 
 **Estado fijado a mano.** El escáner recalcula el estado de un proyecto en cada pasada salvo que tenga
 `statusLocked`. Si el proyecto lo tiene y el `PATCH` cambia `status` sin decir nada de `statusLocked`, responde
 `409 status_locked` y no cambia nada: la app debe enseñar que está fijado y mandar `statusLocked: true` (sigue fijado
-con el estado nuevo) o `false` (lo vuelve a calcular el escáner). Sin fijar, el estado nuevo puede cambiarlo el
-siguiente escaneo; para que se quede, `statusLocked: true`, como la casilla de la ficha.
+con el estado nuevo). Sin fijar, el estado nuevo puede cambiarlo el siguiente escaneo; para que se quede,
+`statusLocked: true`, como la casilla de la ficha.
+
+**Archivar y quitar el fijado solo en Central.** Por la API no se archiva: `status: "ARCHIVED"` da 422 («Archivar se
+hace en Central»), porque archivar saca el proyecto de auditorías y alertas y, en la siguiente sincronización, borra su
+monitor de Uptime Kuma con su historial. Tampoco se quita el estado fijado: `statusLocked: false` da 422, porque sin él
+el escáner lo recalcula y puede dejarlo archivado (por ejemplo, si su carpeta principal es una copia de seguridad) sin
+que nadie lo vea. Un proyecto ya archivado sí se puede volver a activar por la API.
 
 ## Ejemplos
 

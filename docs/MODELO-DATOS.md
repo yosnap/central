@@ -47,7 +47,7 @@ Fuente de verdad: `prisma/schema.prisma`.
 | `SavedMessage` | 3 | Correo importante guardado desde Gmail: remitente, destinatarios, asunto, texto (`body`), hilo (`threadId`), fecha, y cliente o proyecto ligado. Se conserva aunque se borre en Gmail |
 | `CalendarEventLink` | 3 | Evento de Google Calendar ligado a un cliente o proyecto (cuenta, calendario, id del evento, título y fechas en caché para las fichas y el MCP) |
 | `ApiKey` | API v1 | Clave de una app conectada (Ajustes → Apps conectadas): nombre, `prefix` visible, `hash` SHA-256 de la clave (la clave nunca se guarda), `scopes` (`lectura`, `presupuestos`, `escritura`), creación, último uso y `revokedAt` (revocar no borra). Ver [API.md](API.md) |
-| `ApiChange` | API v1 | Registro de lo que cambian las apps por la API: `keyId` y `keyName` de la clave, `action` (create, update), `entity` (client, project, note, quotePhase), `entityId` y `changes` (JSON `{ campo: { from, to } }`). Solo altas. Ver [API.md](API.md) |
+| `ApiChange` | API v1 | Registro de lo que cambian las apps por la API: `keyId` y `keyName` de la clave, `action` (create, update), `entity` (client, project, note, quotePhase), `entityId`, `fields` (nombres de los campos que cambiaron) y `createdAt`. Nunca guarda valores ni textos de notas, así que no retiene datos personales de un cliente borrado. Solo altas. Ver [API.md](API.md) |
 
 ## Reglas de estado de proyecto
 

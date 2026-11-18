@@ -96,7 +96,10 @@ API solo tiene `POST` y `PATCH` (sin `DELETE`), con el permiso `escritura` (y `p
 concurrencia es optimista con una `version` que es la huella de los campos editables y no `updatedAt`: el escáner
 reescribe los proyectos cada hora y daría conflictos falsos, y una huella no depende de los milisegundos. La versión
 se comprueba con la fila bloqueada en la misma transacción que escribe. Un estado fijado a mano (`statusLocked`) no se
-cambia salvo que la petición diga qué hacer con el fijado, para no pisar en silencio una decisión tomada en la web.
-Cada escritura queda en `ApiChange` (clave, app y antes/después de cada campo); la web y el MCP no se registran ahí.
+cambia salvo que la petición mande `statusLocked: true`, para no pisar en silencio una decisión tomada en la web.
+Decisión del usuario (18/11/2026): por la API no se archiva ni se quita el fijado (el escáner podría archivar); las dos
+cosas se hacen en Central, porque archivar borra el monitor de Uptime Kuma y saca el proyecto de auditorías y alertas.
+Cada escritura queda en `ApiChange` con la app, la entidad y solo los nombres de los campos (decisión del usuario,
+18/11/2026: sin valores ni textos de notas, para no retener datos personales); la web y el MCP no se registran ahí.
 La lógica vive en `src/lib/api/mutations/` y la usan también las Server Actions (alta y datos de clientes, notas,
 campos de una fase) y `update_phase` del MCP, con la misma validación y el mismo comportamiento que antes.
