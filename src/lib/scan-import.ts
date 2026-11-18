@@ -120,8 +120,11 @@ export async function importProjects(all: ScannedProject[], roots: string[], { m
   }
   const gone = await markGone(seenIds, roots, { mapPath, unmapPath }, now, log, exists)
   for (const r of roots) {
-    const rp = mapPath(path.resolve(r))
-    await prisma.scanRoot.upsert({ where: { path: rp }, update: { lastScanAt: now, found: all.length }, create: { path: rp, lastScanAt: now, found: all.length } })
+    const root = path.resolve(r)
+    const rp = mapPath(root)
+    // los proyectos de esta raíz, no los de todo el escaneo (scanRoots pone en `main.root` la raíz de la que sale cada uno)
+    const found = all.filter((p) => p.main.root === root).length
+    await prisma.scanRoot.upsert({ where: { path: rp }, update: { lastScanAt: now, found }, create: { path: rp, lastScanAt: now, found } })
   }
   return { projects: all.length, moved, gone }
 }
@@ -132,7 +135,9 @@ export async function importProjects(all: ScannedProject[], roots: string[], { m
  * dentro de una raíz escaneada que existe: con el disco externo desconectado no se marca nada.
  */
 async function markGone(seenIds: Set<string>, roots: string[], { mapPath, unmapPath }: PathMap, now: Date, log: (m: string) => void, exists: (p: string) => boolean) {
-  const scanned = roots.filter((r) => exists(r)).map((r) => mapPath(path.resolve(r)).replace(/\/$/, '') + '/')
+  // Comparación por prefijo con `/` y sin distinguir mayúsculas solo en Windows (rutas con `\` y `c:` = `C:`); en Mac/Linux `norm` es la identidad.
+  const norm = (p: string) => (process.platform === 'win32' ? p.replace(/\\/g, '/').toLowerCase() : p)
+  const scanned = roots.filter((r) => exists(r)).map((r) => norm(mapPath(path.resolve(r))).replace(/\/$/, '') + '/')
   if (!scanned.length) return 0
   const candidates = await prisma.project.findMany({
     where: { id: { notIn: [...seenIds] }, goneAt: null },
@@ -141,7 +146,7 @@ async function markGone(seenIds: Set<string>, roots: string[], { mapPath, unmapP
   let n = 0
   for (const p of candidates) {
     if (!p.locations.length) continue
-    const inScanned = p.locations.every((l) => scanned.some((r) => `${l.path}/`.startsWith(r)))
+    const inScanned = p.locations.every((l) => scanned.some((r) => `${norm(l.path)}/`.startsWith(r)))
     if (!inScanned || p.locations.some((l) => exists(unmapPath(l.path)))) continue
     await prisma.project.update({ where: { id: p.id }, data: { goneAt: now } })
     log(`  Sin carpeta: ${p.name}`)

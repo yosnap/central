@@ -103,6 +103,18 @@ function branchVersions(dir: string, file: string) {
   return out
 }
 
+/**
+ * Git en Windows escribe las rutas con `/` (`C:/repo`), y el recorrido del disco las da con `\`: sin unificarlas,
+ * el mismo worktree sale dos veces y no se empareja con su repositorio. En Mac/Linux no se toca nada.
+ */
+const fromGitPath = (p: string) => (process.platform === 'win32' ? path.normalize(p) : p)
+/** Ruta del disco con `/` como separador, para las expresiones que buscan `/carpeta/`: en Windows llega con `\`. En Mac/Linux no cambia nada. */
+const relPosix = (p: string) => p.split(path.sep).join('/')
+// carpeta «worktrees» dentro de una ruta ya guardada (en Windows, con `\` o con `/`)
+const IN_WORKTREES_DIR = process.platform === 'win32' ? /[\\/]worktrees[\\/]/ : /\/worktrees\//
+// clave para emparejar rutas de carpetas: en Windows no se distinguen mayúsculas, y git escribe `C:` aunque la raíz guardada diga `c:`
+const pathKey = (p: string) => (process.platform === 'win32' ? p.toLowerCase() : p)
+
 function git(dir: string, ...args: string[]): string {
   try {
     return execFileSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] }).trim()
@@ -193,7 +205,7 @@ function analyze(fsDir: string, root: string, mapPath: (p: string) => string, fe
   if (!d.version || !d.framework) {
     const subs = subDirs(fsDir).map(pkgInfo).filter((x): x is PkgInfo => !!x)
     const main = subs.find((s) => s.framework) ?? subs[0]
-    const withVersion = subs.find((s) => /\/(web|frontend|app|client)$/.test(s.dir) && s.version) ?? (main?.version ? main : undefined)
+    const withVersion = subs.find((s) => /\/(web|frontend|app|client)$/.test(relPosix(s.dir)) && s.version) ?? (main?.version ? main : undefined)
     if (!d.version && withVersion) { d.version = withVersion.version; d.versionFile = path.join(path.relative(fsDir, withVersion.dir), 'package.json') }
     d.framework ??= main?.framework
     for (const s of subs) for (const t of s.stack) if (!d.stack.includes(t)) d.stack.push(t)
@@ -229,7 +241,7 @@ function analyze(fsDir: string, root: string, mapPath: (p: string) => string, fe
       // worktree: ".git" es un fichero "gitdir: /ruta/repo/.git/worktrees/nombre"
       d.isWorktree = true
       const m = fs.readFileSync(gp, 'utf8').match(/gitdir:\s*(.+)/)
-      if (m) d.worktreeOf = m[1].trim().split('/.git/worktrees/')[0]
+      if (m) d.worktreeOf = fromGitPath(m[1].trim()).split(`${path.sep}.git${path.sep}worktrees${path.sep}`)[0]
     }
     d.branch = git(fsDir, 'rev-parse', '--abbrev-ref', 'HEAD') || undefined
     const lc = git(fsDir, 'log', '-1', '--format=%cI')
@@ -305,7 +317,7 @@ function listWorktrees(repo: string): GitWorktree[] {
     const p = lines.find((l) => l.startsWith('worktree '))?.slice(9)
     if (!p) continue
     const branch = lines.find((l) => l.startsWith('branch '))?.slice(7).replace(/^refs\/heads\//, '')
-    list.push({ path: p, branch, prunable: lines.some((l) => l.startsWith('prunable')) })
+    list.push({ path: fromGitPath(p), branch, prunable: lines.some((l) => l.startsWith('prunable')) })
   }
   return list.slice(1)
 }
@@ -315,7 +327,7 @@ function listWorktrees(repo: string): GitWorktree[] {
  * o en carpetas ocultas (.claude/worktrees). Marca los fusionados y los que ya no existen.
  */
 function addGitWorktrees(found: FoundDir[], root: string, mapPath: (p: string) => string): FoundDir[] {
-  const known = new Map(found.map((d) => [d.fsPath, d]))
+  const known = new Map(found.map((d) => [pathKey(d.fsPath), d]))
   const extra: FoundDir[] = []
   for (const main of [...found]) {
     if (!main.isGit || main.isWorktree) continue
@@ -324,12 +336,12 @@ function addGitWorktrees(found: FoundDir[], root: string, mapPath: (p: string) =
     const merged = new Set(git(main.fsPath, 'branch', '--merged', 'HEAD', '--format=%(refname:short)').split('\n').filter(Boolean))
     for (const w of worktrees) {
       if (SECRET.test(w.path)) continue
-      let d = known.get(w.path)
+      let d = known.get(pathKey(w.path))
       if (!d) {
         d = !w.prunable && fs.existsSync(w.path)
           ? analyze(w.path, root, mapPath)
           : { absPath: mapPath(w.path), fsPath: w.path, rel: path.relative(root, w.path), root, name: path.basename(w.path), stack: [], domains: [], remotes: [], hasClaudeMd: false, isGit: true, isWorktree: true, branch: w.branch, missing: true }
-        known.set(w.path, d)
+        known.set(pathKey(w.path), d)
         extra.push(d)
       }
       d.isWorktree = true
@@ -344,7 +356,7 @@ function addGitWorktrees(found: FoundDir[], root: string, mapPath: (p: string) =
 const BACKUP_RE = /(backup|_old|old_|corrupted|copia|original|\btemp\b|_mal$| --$| v1(\.\d+)?$|_\d{8}|public_html\d|public_html_)/i
 
 function isBackup(d: FoundDir): boolean {
-  return BACKUP_RE.test(d.name) || /\/(backup|backups|Backup Web realizadas)\//i.test('/' + d.rel + '/')
+  return BACKUP_RE.test(d.name) || /\/(backup|backups|Backup Web realizadas)\//i.test('/' + relPosix(d.rel) + '/')
 }
 
 function lastActivity(d: FoundDir): Date | undefined {
@@ -352,7 +364,7 @@ function lastActivity(d: FoundDir): Date | undefined {
 }
 
 function classifyKind(d: FoundDir, top: string): Kind {
-  const p = '/' + d.rel + '/'
+  const p = '/' + relPosix(d.rel) + '/'
   const owner = d.remote ? remoteKey(d.remote) : ''
   const thirdParty = !!owner && !MY_OWNERS.some((o) => owner.includes(o))
   if (top === 'Clientes' || top === 'Trabajo') return /\/Proyectos test\//i.test(p) ? 'EXPERIMENT' : 'CLIENT'
@@ -393,18 +405,18 @@ function statusFrom(main: FoundDir, mainKind: LocKind, now: Date): Status {
 
 /** Agrupa carpetas en proyectos: mismo remoto o worktree del mismo repo → un proyecto. */
 export function groupProjects(dirs: FoundDir[], now = new Date()): ScannedProject[] {
-  const byPath = new Map(dirs.map((d) => [d.absPath, d]))
+  const byPath = new Map(dirs.map((d) => [pathKey(d.absPath), d]))
   const keyOf = new Map<FoundDir, string>()
   for (const d of dirs) {
     if (d.isWorktree && d.worktreeOf) {
-      const main = byPath.get(d.worktreeOf)
+      const main = byPath.get(pathKey(d.worktreeOf))
       // el worktree comparte remoto con su principal, aunque el principal no esté en este escaneo
       const remote = main?.remote ?? d.remote
       if (remote) { keyOf.set(d, 'git:' + remoteKey(remote)); continue }
-      keyOf.set(d, 'local:' + d.worktreeOf); continue
+      keyOf.set(d, 'local:' + pathKey(d.worktreeOf)); continue
     }
     if (d.remote) { keyOf.set(d, 'git:' + remoteKey(d.remote)); continue }
-    keyOf.set(d, 'local:' + d.absPath)
+    keyOf.set(d, 'local:' + pathKey(d.absPath))
   }
   // worktrees sin .git legible: "<repo>/worktrees/<repo>-xxx" o "<repo>-<rama>" junto al repo
   for (const d of dirs) {
@@ -423,11 +435,11 @@ export function groupProjects(dirs: FoundDir[], now = new Date()): ScannedProjec
 
   const projects: ScannedProject[] = []
   for (const [key, members] of groups) {
-    const rank = (d: FoundDir) => (d.isWorktree || /\/worktrees\//.test(d.absPath) ? 2 : 0) + (isBackup(d) ? 4 : 0)
+    const rank = (d: FoundDir) => (d.isWorktree || IN_WORKTREES_DIR.test(d.absPath) ? 2 : 0) + (isBackup(d) ? 4 : 0)
     const sorted = [...members].sort((a, b) => rank(a) - rank(b) || (lastActivity(b)?.getTime() ?? 0) - (lastActivity(a)?.getTime() ?? 0))
     const main = sorted[0]
     const onlyWorktrees = members.every((d) => d.isWorktree)
-    const locKind = (d: FoundDir): LocKind => d === main && !onlyWorktrees ? (isBackup(d) ? 'BACKUP' : 'MAIN') : d.isWorktree || /\/worktrees\//.test(d.absPath) ? 'WORKTREE' : isBackup(d) ? 'BACKUP' : 'COPY'
+    const locKind = (d: FoundDir): LocKind => d === main && !onlyWorktrees ? (isBackup(d) ? 'BACKUP' : 'MAIN') : d.isWorktree || IN_WORKTREES_DIR.test(d.absPath) ? 'WORKTREE' : isBackup(d) ? 'BACKUP' : 'COPY'
     const top = main.rel.split(path.sep)[0]
     const acts = members.map(lastActivity).filter(Boolean) as Date[]
     const lastAct = acts.length ? new Date(Math.max(...acts.map((x) => x.getTime()))) : undefined
