@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.2 — 2026-11-19
+
+- Ajustes: tras «Escanear ahora», cada carpeta raíz muestra cuántos proyectos tiene ella, no el total del escaneo.
+- Windows: el escáner reconoce las copias de seguridad, el tipo por carpeta y la versión de los monorepos con rutas `\`; marca «sin carpeta en disco» los proyectos borrados; y empareja los worktrees con su repositorio aunque git escriba `C:/` y la raíz guardada diga `c:\`.
+- Windows: el explorador de carpetas oculta las carpetas de sistema en la raíz de cada unidad y comprueba las unidades sin bloquear la navegación.
+
 ## 0.6.1 — 2026-11-18
 
 - La ficha de proyecto de la API (`GET /api/v1/proyectos/{id}`) vuelve a dar en `version` la versión del software y da la huella para editar en `editVersion`.
