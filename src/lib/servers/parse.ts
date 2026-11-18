@@ -5,7 +5,7 @@
  */
 
 /** Versión de recoger-root.sh en remote/: si el servidor tiene una anterior, la ficha ofrece actualizarla. */
-export const ROOT_SCRIPT_VERSION = 4
+export const ROOT_SCRIPT_VERSION = 5
 
 const SECTIONS = new Set([
   'version', 'sistema', 'memoria', 'disco', 'sesiones', 'puertos', 'intentos', 'actualizaciones', 'bastionado',
@@ -71,7 +71,7 @@ const keyValue = (lines: string[]) => {
 const DOMAIN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
 const NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
 
-export type Service = { name: string; kind: 'swarm' | 'container'; ok: boolean; stopped: boolean; detail: string; desired: number | null; running: number | null }
+export type Service = { name: string; kind: 'swarm' | 'container'; ok: boolean; stopped: boolean; /** Tarea puntual (migración, build) que terminó bien: ni caída ni en marcha. */ done: boolean; detail: string; desired: number | null; running: number | null }
 export type InventoryItem = { name: string; status: string; composeProject: string | null; composeService: string | null; swarmService: string | null }
 export type Reading = {
   version: number | null
@@ -104,7 +104,7 @@ function services(swarm: string[], containers: string[]): Service[] {
     if (!name || !r) continue
     // 0/0 es parado (Dokploy y Easypanel escalan a cero al pulsar «stop»): no está caído, pero tampoco verde
     const completed = rep.includes('completed')
-    out.push({ name: name.slice(0, 64), kind: 'swarm', ok: r[1] === r[2] || completed, stopped: r[2] === '0' && !completed, detail: rep.trim().slice(0, 16), running: Number(r[1]), desired: Number(r[2]) })
+    out.push({ name: name.slice(0, 64), kind: 'swarm', ok: r[1] === r[2] || completed, stopped: r[2] === '0' && !completed, done: completed && r[1] !== r[2], detail: rep.trim().slice(0, 16), running: Number(r[1]), desired: Number(r[2]) })
   }
   // Junto a Swarm conviven contenedores sueltos (despliegues Compose de Dokploy): entran todos menos las tareas de un servicio («servicio.n.id»)
   const swarmNames = new Set(out.map((s) => s.name))
@@ -113,7 +113,7 @@ function services(swarm: string[], containers: string[]): Service[] {
     if (p.length < 2 || !p[0]) continue
     if (swarmNames.has(p[0].split('.')[0])) continue
     const endedWell = p[1] === 'exited' && (p[2] ?? '').startsWith('Exited (0)') // migraciones, builds
-    out.push({ name: p[0].slice(0, 64), kind: 'container', ok: p[1] === 'running' || endedWell, stopped: false, detail: p[1].slice(0, 16), running: p[1] === 'running' ? 1 : 0, desired: 1 })
+    out.push({ name: p[0].slice(0, 64), kind: 'container', ok: p[1] === 'running' || endedWell, stopped: false, done: endedWell, detail: p[1].slice(0, 16), running: p[1] === 'running' ? 1 : 0, desired: 1 })
   }
   return out
 }

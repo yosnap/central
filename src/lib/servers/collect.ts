@@ -89,7 +89,7 @@ export async function readServer(server: Server) {
   if (r.services) {
     const before = new Map((await prisma.serverContainer.findMany({ where: { serverId: server.id }, select: { name: true, startedAt: true } })).map((c) => [c.name, c.startedAt]))
     for (const s of r.services) {
-      const state = !s.ok ? 'down' : s.stopped ? 'stopped' : 'ok'
+      const state = !s.ok ? 'down' : s.stopped ? 'stopped' : s.done ? 'done' : 'ok'
       // sin la sección de detalle (script antiguo) se conservan la imagen y los dominios que hubiera
       const det = r.details?.[s.name]
       const extra = r.details ? { image: det?.image ?? null, domains: sortDomains(det?.domains ?? []), version: det?.version ?? versionFromImage(det?.image), startedAt: det?.startedAt ?? null } : {}
