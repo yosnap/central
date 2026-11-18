@@ -5,7 +5,7 @@
  */
 import { VISIBLE_PREFIX_LENGTH, bearerKey, hashApiKey, sameHash, type ApiScope } from './keys'
 
-export type StoredKey = { id: string; hash: string; scopes: string[]; revokedAt: Date | null; lastUsedAt: Date | null }
+export type StoredKey = { id: string; name: string; hash: string; scopes: string[]; revokedAt: Date | null; lastUsedAt: Date | null }
 
 export type KeyStore = {
   findByPrefix(prefix: string): Promise<StoredKey[]>
@@ -13,7 +13,8 @@ export type KeyStore = {
   touch(id: string, at: Date): Promise<void>
 }
 
-export type ApiCaller = { id: string; scopes: string[] }
+/** Quién llama: la clave (id y nombre de la app, para el registro de cambios) y sus permisos. */
+export type ApiCaller = { id: string; name: string; scopes: string[] }
 export type AuthResult = { ok: true; caller: ApiCaller } | { ok: false; response: Response }
 
 export const RATE_LIMIT = 120
@@ -55,7 +56,8 @@ export function createApiAuth(store: KeyStore, now: () => number = Date.now, win
     return w.count > RATE_LIMIT ? Math.max(1, Math.ceil((w.start + WINDOW_MS - t) / 1000)) : null
   }
 
-  return async function requireApiKey(req: Request, scope: ApiScope | null): Promise<AuthResult> {
+  /** `scope` puede ser uno o varios permisos: hacen falta todos (403 con el primero que falte). */
+  return async function requireApiKey(req: Request, scope: ApiScope | readonly ApiScope[] | null): Promise<AuthResult> {
     const key = bearerKey(req)
     if (!key) return { ok: false, response: unauthorized() }
     const hash = hashApiKey(key)
@@ -64,19 +66,20 @@ export function createApiAuth(store: KeyStore, now: () => number = Date.now, win
     if (!row || row.revokedAt) return { ok: false, response: unauthorized() }
     const retry = overLimit(row.id)
     if (retry !== null) return { ok: false, response: apiError(429, 'rate_limited', {}, { 'retry-after': String(retry) }) }
-    if (scope && !row.scopes.includes(scope)) return { ok: false, response: apiError(403, 'forbidden', { scope }) }
+    const missing = (scope === null ? [] : typeof scope === 'string' ? [scope] : scope).find((s) => !row.scopes.includes(s))
+    if (missing) return { ok: false, response: apiError(403, 'forbidden', { scope: missing }) }
     const at = new Date(now())
     if (!row.lastUsedAt || at.getTime() - row.lastUsedAt.getTime() >= TOUCH_EVERY_MS) {
       store.touch(row.id, at).catch(() => console.error('[api] no se ha podido apuntar el último uso de una clave'))
     }
-    return { ok: true, caller: { id: row.id, scopes: row.scopes } }
+    return { ok: true, caller: { id: row.id, name: row.name, scopes: row.scopes } }
   }
 }
 
 const prismaStore: KeyStore = {
   async findByPrefix(prefix) {
     const { prisma } = await import('../prisma')
-    return prisma.apiKey.findMany({ where: { prefix }, select: { id: true, hash: true, scopes: true, revokedAt: true, lastUsedAt: true } })
+    return prisma.apiKey.findMany({ where: { prefix }, select: { id: true, name: true, hash: true, scopes: true, revokedAt: true, lastUsedAt: true } })
   },
   async touch(id, at) {
     const { prisma } = await import('../prisma')

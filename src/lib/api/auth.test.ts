@@ -15,7 +15,7 @@ function memoryStore(rows: (StoredKey & { prefix: string })[]) {
 }
 
 function stored(k: Key, id: string, scopes: string[], revokedAt: Date | null = null) {
-  return { id, prefix: k.prefix, hash: k.hash, scopes, revokedAt, lastUsedAt: null }
+  return { id, name: `app ${id}`, prefix: k.prefix, hash: k.hash, scopes, revokedAt, lastUsedAt: null }
 }
 
 const req = (key?: string, method = 'GET') =>

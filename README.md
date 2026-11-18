@@ -64,7 +64,7 @@ Herramientas y uso en [docs/MCP.md](docs/MCP.md).
 
 ## API para apps conectadas
 
-Otras apps (AgoraOne…) leen Central por `/api/v1` con una clave creada en Ajustes → Apps conectadas. Rutas, permisos y ejemplos en [docs/API.md](docs/API.md).
+Otras apps (AgoraOne…) leen Central por `/api/v1` con una clave creada en Ajustes → Apps conectadas y, con el permiso de escritura, crean y cambian clientes, notas, proyectos y fases de presupuestos (nunca borran). Rutas, permisos y ejemplos en [docs/API.md](docs/API.md).
 
 ## Documentación
 

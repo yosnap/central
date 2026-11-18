@@ -15,6 +15,7 @@ import { listPending } from '../lib/api/pending'
 import { PROJECT_KINDS, PROJECT_STATUSES, getProject, listProjects } from '../lib/api/projects'
 import { QUOTE_STATUSES, createQuote, createQuoteShape, getQuote, listQuotes } from '../lib/api/quotes'
 import { listWebsites } from '../lib/api/websites'
+import { updateQuotePhase } from '../lib/api/mutations/quote-phases'
 
 const server = new McpServer({ name: 'central', version: '0.1.0' })
 const text = (data: unknown) => ({ content: [{ type: 'text' as const, text: JSON.stringify(data, null, 2) }] })
@@ -146,11 +147,7 @@ server.registerTool('update_phase', {
 }, async ({ quote, phase, status, dueDate }) => {
   const p = await prisma.quotePhase.findFirst({ where: { quote: { OR: [{ id: quote }, { number: quote }] }, OR: [{ id: phase }, { name: { equals: phase, mode: 'insensitive' } }] } })
   if (!p) return { content: [{ type: 'text', text: 'Fase no encontrada. Usa get_quote para ver sus fases.' }], isError: true }
-  const done = status === 'DONE' || status === 'INVOICED'
-  const updated = await prisma.quotePhase.update({
-    where: { id: p.id },
-    data: { ...(status ? { status, completedAt: done ? (p.completedAt ?? new Date()) : null } : {}), ...(dueDate ? { dueDate: new Date(`${dueDate}T12:00:00Z`) } : {}) },
-  })
+  const updated = await updateQuotePhase(p.id, { status, dueDate: dueDate ? new Date(`${dueDate}T12:00:00Z`) : undefined })
   return text({ id: updated.id, name: updated.name, status: updated.status, dueDate: updated.dueDate, completedAt: updated.completedAt })
 })
 

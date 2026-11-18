@@ -9,9 +9,11 @@ import { prisma } from './prisma'
 import { storageDir } from './quote-ai'
 import { newQuoteNumber } from './quote-number'
 import { requireSession } from './session'
+import { formResult } from './api/mutations/errors'
+import { PHASE_STATUS_VALUES, updateQuotePhase } from './api/mutations/quote-phases'
 
 const STATUS = z.enum(['DRAFT', 'SENT', 'ACCEPTED', 'REJECTED', 'EXPIRED'])
-const PHASE_STATUS = z.enum(['PENDING', 'IN_PROGRESS', 'DONE', 'INVOICED'])
+const PHASE_STATUS = z.enum(PHASE_STATUS_VALUES)
 
 /** Número escrito a la española o a la inglesa: «1.234,56», «12,5», «12.5». */
 const num = (min: number, max: number, msg = 'Escribe un número') =>
@@ -231,11 +233,9 @@ export async function updatePhaseField(form: FormData) {
   const field = z.enum(Object.keys(PHASE_FIELDS) as [keyof typeof PHASE_FIELDS]).parse(form.get('field'))
   const r = PHASE_FIELDS[field].safeParse(String(form.get('value') ?? ''))
   if (!r.success) return errors(r.error)
-  // hecha o facturada: se apunta cuándo (de hecha a facturada se conserva la fecha); si vuelve atrás, se borra
-  const prev = field === 'status' ? await prisma.quotePhase.findUnique({ where: { id }, select: { completedAt: true } }) : null
-  const extra = field === 'status' ? { completedAt: r.data === 'DONE' || r.data === 'INVOICED' ? (prev?.completedAt ?? new Date()) : null } : {}
-  await prisma.quotePhase.update({ where: { id }, data: { [field]: r.data, ...extra } })
-  refresh(await quoteOfPhase(id))
+  const u = await formResult(updateQuotePhase(id, { [field]: r.data }))
+  if (u.error !== undefined) return { error: u.error }
+  refresh(u.value.quoteId)
 }
 
 export async function deletePhase(form: FormData) {

@@ -9,7 +9,7 @@ import { GRANTABLE_SCOPES } from './api/scopes'
 
 const CreateKey = z.object({
   name: z.string().trim().min(1, 'Ponle un nombre').max(80),
-  scopes: z.array(z.enum(GRANTABLE_SCOPES, 'Ese permiso todavía no se puede conceder')).min(1, 'Elige al menos un permiso'),
+  scopes: z.array(z.enum(GRANTABLE_SCOPES, 'Ese permiso no existe')).min(1, 'Elige al menos un permiso'),
 })
 
 /**

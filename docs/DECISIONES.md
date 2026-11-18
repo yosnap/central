@@ -88,3 +88,15 @@ El correo y la agenda se conectan con Google (Gmail, Workspace y Calendar), que 
 
 ## 2026-11-18 · API v1 con claves por app
 Otras apps (AgoraOne en macOS, Windows y Linux, con Central en producción) necesitan leer Central sin su código, bun ni la BD. Se añade una API HTTP JSON versionada (`/api/v1`) en lugar de un MCP por HTTP: las vistas necesitan paginación, filtros, ficheros (PDF y Word) y códigos de estado, y el MCP devuelve texto para un modelo. Cada app tiene su clave, creada en Ajustes, guardada solo como SHA-256, mostrada una vez, revocable y con permisos (`lectura`, `presupuestos`, `escritura`; el último reservado). No se reutiliza `CENTRAL_API_TOKEN`: es una variable de entorno sin rotación, compartida con CostGuard y con `/api/importar` (escritura masiva). Las consultas viven en `src/lib/api/` y las usan la API y el MCP, con la misma salida. Por la API, `POST presupuestos` solo crea borradores, como `create_quote`.
+
+## 2026-11-18 · Escrituras por la API v1: crear y cambiar con versión, nunca borrar
+El usuario decidió que desde AgoraOne se puede crear y cambiar en Central (clientes, notas, estado y fase de
+proyectos, fases de presupuestos), siempre tras ver el cambio exacto y confirmarlo, y que nunca se borra. Por eso la
+API solo tiene `POST` y `PATCH` (sin `DELETE`), con el permiso `escritura` (y `presupuestos` para las fases). La
+concurrencia es optimista con una `version` que es la huella de los campos editables y no `updatedAt`: el escáner
+reescribe los proyectos cada hora y daría conflictos falsos, y una huella no depende de los milisegundos. La versión
+se comprueba con la fila bloqueada en la misma transacción que escribe. Un estado fijado a mano (`statusLocked`) no se
+cambia salvo que la petición diga qué hacer con el fijado, para no pisar en silencio una decisión tomada en la web.
+Cada escritura queda en `ApiChange` (clave, app y antes/después de cada campo); la web y el MCP no se registran ahí.
+La lógica vive en `src/lib/api/mutations/` y la usan también las Server Actions (alta y datos de clientes, notas,
+campos de una fase) y `update_phase` del MCP, con la misma validación y el mismo comportamiento que antes.

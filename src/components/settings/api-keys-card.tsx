@@ -11,7 +11,7 @@ const SCOPE_SHORT: Record<ApiScope, string> = { lectura: 'Lectura', presupuestos
 export async function ApiKeysCard() {
   const keys = await prisma.apiKey.findMany({ orderBy: [{ revokedAt: { sort: 'asc', nulls: 'first' } }, { createdAt: 'desc' }], select: { id: true, name: true, prefix: true, scopes: true, createdAt: true, lastUsedAt: true, revokedAt: true } })
   return (
-    <Card title="Apps conectadas" note="Claves para que otras apps (AgoraOne…) lean Central por su API (/api/v1). La clave completa solo se ve al crearla; aquí queda su principio para reconocerla. Revocarla la invalida al momento.">
+    <Card title="Apps conectadas" note="Claves para que otras apps (AgoraOne…) lean Central por su API (/api/v1) y, con el permiso de escritura, creen y cambien clientes, proyectos, notas y fases de presupuestos (nunca borran). La clave completa solo se ve al crearla; aquí queda su principio para reconocerla. Revocarla la invalida al momento.">
       <ApiKeyCreateForm />
       {keys.length === 0 ? <Empty title="Sin apps conectadas">Crea una clave con el formulario de arriba y pégala en la app que se va a conectar.</Empty> : (
         <Table head={['App', 'Clave', 'Permisos', 'Creada', 'Último uso', '']}>

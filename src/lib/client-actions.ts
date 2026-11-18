@@ -6,17 +6,9 @@ import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { prisma } from './prisma'
 import { requireSession } from './session'
-
-const opt = (max: number) => z.string().trim().max(max).transform((v) => v || null)
-
-const FIELDS = {
-  name: z.string().trim().min(1, 'El nombre no puede quedar vacío').max(120),
-  company: opt(160),
-  email: z.string().trim().max(200).refine((v) => !v || z.email().safeParse(v).success, 'El correo no es válido').transform((v) => v || null),
-  phone: opt(40),
-  taxId: opt(30),
-  address: opt(500),
-} as const
+import { CLIENT_FIELDS, createClient as createClientCore, updateClient, type ClientField } from './api/mutations/clients'
+import { formResult } from './api/mutations/errors'
+import { createNote } from './api/mutations/notes'
 
 function refresh(id?: string) {
   revalidatePath('/clientes')
@@ -24,31 +16,26 @@ function refresh(id?: string) {
   revalidatePath('/proyectos', 'layout')
 }
 
-async function nameTaken(name: string, id?: string) {
-  const other = await prisma.client.findFirst({ where: { name: { equals: name, mode: 'insensitive' } }, select: { id: true } })
-  return !!other && other.id !== id
-}
-
-const New = z.object({ name: FIELDS.name, company: FIELDS.company, email: FIELDS.email, phone: FIELDS.phone })
+const New = z.object({ name: CLIENT_FIELDS.name, company: CLIENT_FIELDS.company, email: CLIENT_FIELDS.email, phone: CLIENT_FIELDS.phone })
 
 export async function createClient(form: FormData) {
   await requireSession()
   const r = New.safeParse(Object.fromEntries(form))
   if (!r.success) return { error: r.error.issues.map((i) => i.message).join('. ') }
-  if (await nameTaken(r.data.name)) return { error: `Ya hay un cliente llamado «${r.data.name}»` }
-  const c = await prisma.client.create({ data: r.data })
+  const c = await formResult(createClientCore(r.data))
+  if (c.error !== undefined) return { error: c.error }
   refresh()
-  redirect(`/clientes/${c.id}`)
+  redirect(`/clientes/${c.value.id}`)
 }
 
 export async function updateClientField(form: FormData) {
   await requireSession()
   const id = z.string().min(1).parse(form.get('id'))
-  const field = z.enum(Object.keys(FIELDS) as [keyof typeof FIELDS]).parse(form.get('field'))
-  const r = FIELDS[field].safeParse(String(form.get('value') ?? ''))
+  const field = z.enum(Object.keys(CLIENT_FIELDS) as [ClientField]).parse(form.get('field'))
+  const r = CLIENT_FIELDS[field].safeParse(String(form.get('value') ?? ''))
   if (!r.success) return { error: r.error.issues.map((i) => i.message).join('. ') }
-  if (field === 'name' && (await nameTaken(r.data as string, id))) return { error: `Ya hay un cliente llamado «${r.data}»` }
-  await prisma.client.update({ where: { id }, data: { [field]: r.data } })
+  const u = await formResult(updateClient(id, { [field]: r.data }))
+  if (u.error !== undefined) return { error: u.error }
   refresh(id)
 }
 
@@ -90,6 +77,7 @@ export async function addClientNote(form: FormData) {
   const id = z.string().min(1).parse(form.get('id'))
   const body = z.string().trim().max(5000).parse(form.get('body') ?? '')
   if (!body) return { error: 'La nota está vacía' }
-  await prisma.note.create({ data: { body, clientId: id, source: 'app' } })
+  const n = await formResult(createNote(body, { clientId: id }, { source: 'app' }))
+  if (n.error !== undefined) return { error: n.error }
   revalidatePath(`/clientes/${id}`)
 }

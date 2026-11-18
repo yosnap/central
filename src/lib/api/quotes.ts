@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import { Prisma } from '../../generated/prisma/client'
 import { prisma } from '../prisma'
+import { quotePhaseVersion } from './mutations/quote-phases'
 import { newQuoteNumber } from '../quote-number'
 import { decimal, phaseAmounts, quoteTotals, visibleStatus } from '../quotes'
 
@@ -20,8 +21,11 @@ export async function listQuotes({ client, status }: { client?: string; status?:
     .filter((q) => !status || q.status === status)
 }
 
-/** Presupuesto completo por id o número (P-2026-001): partidas, totales y fases con su importe. */
-export async function getQuote(id: string) {
+/**
+ * Presupuesto completo por id o número (P-2026-001): partidas, totales y fases con su importe.
+ * Con `phaseIds` (API v1), cada fase lleva también su id y su versión para poder cambiarla; el MCP no los pide.
+ */
+export async function getQuote(id: string, { phaseIds = false }: { phaseIds?: boolean } = {}) {
   const q = await prisma.quote.findFirst({
     where: { OR: [{ id }, { number: id }] },
     include: { client: { select: { id: true, name: true } }, project: { select: { id: true, name: true } }, items: { orderBy: { position: 'asc' } }, phases: { orderBy: { position: 'asc' } } },
@@ -34,7 +38,7 @@ export async function getQuote(id: string) {
     scope: q.scope, includes: q.includes, excludes: q.excludes, assumptions: q.assumptions, thirdPartyCosts: q.thirdPartyCosts, schedule: q.schedule,
     items: q.items.map((i) => ({ description: i.description, details: i.details, quantity: decimal(i.quantity), unit: i.unit, unitPrice: decimal(i.unitPrice), priceMax: i.priceMax == null ? null : decimal(i.priceMax) })),
     base: euros(t.base), tax: euros(t.tax), total: euros(t.total), ...(t.variable ? { baseMax: euros(t.baseMax), totalMax: euros(t.totalMax) } : {}),
-    phases: q.phases.map((p, n) => ({ name: p.name, percent: p.percent == null ? null : decimal(p.percent), amount: p.percent == null ? null : euros(amounts[n]), dueDate: p.dueDate, status: p.status, completedAt: p.completedAt })),
+    phases: q.phases.map((p, n) => ({ ...(phaseIds ? { id: p.id, version: quotePhaseVersion(p) } : {}), name: p.name, percent: p.percent == null ? null : decimal(p.percent), amount: p.percent == null ? null : euros(amounts[n]), dueDate: p.dueDate, status: p.status, completedAt: p.completedAt })),
   }
 }
 

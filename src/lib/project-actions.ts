@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { prisma } from './prisma'
 import { requireSession } from './session'
 import { PLATFORM_LABEL, TYPE_LABEL } from './format'
+import { createNote } from './api/mutations/notes'
 
 /** Actualiza los monitores de Uptime Kuma sin esperar ni romper la acción si no está configurado. */
 const kumaInBackground = () => import('./kuma').then((k) => k.syncKuma()).catch(() => {})
@@ -141,7 +142,7 @@ export async function addNote(form: FormData) {
   await requireSession()
   const id = String(form.get('id'))
   const body = String(form.get('body') ?? '').trim()
-  if (body) await prisma.note.create({ data: { body, projectId: id, source: 'app' } })
+  if (body) await createNote(body, { projectId: id }, { source: 'app' })
   revalidatePath(`/proyectos/${id}`)
 }
 
