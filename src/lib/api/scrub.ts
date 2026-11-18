@@ -33,6 +33,8 @@ export function isIpValue(s: string): boolean {
   const v = s.trim()
   if (!v || /\s/.test(v)) return false
   if (BARE_IP.test(v)) return true
+  // sin una IP escrita no hay nada que quitar: el analizador de URL lee `600000000` (un teléfono) como una IPv4
+  if (!IP_TEST.test(v)) return false
   let host: string
   try { host = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : `http://${v}`).hostname } catch { return false }
   return IP_TEST.test(host.replace(/^\[|\]$/g, ''))

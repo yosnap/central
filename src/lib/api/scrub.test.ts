@@ -90,4 +90,9 @@ describe('limpieza de texto', () => {
       .toEqual({ a: null, b: null, c: 'IP:[IP oculta]', d: 'serie 1.2.3.4.5', e: 'web.ejemplo.es' })
     expect(redactText('servicio en api.198.51.100.4.sslip.io caído')).toBe('servicio en api.[IP oculta].sslip.io caído')
   })
+
+  test('los números sueltos (teléfonos, NIF, códigos postales) no son direcciones, aunque el analizador de URL los lea como IPv4', () => {
+    expect(scrubDeep({ phone: '600000000', taxId: '12345678', zip: '28001' }, { paths: false })).toEqual({ phone: '600000000', taxId: '12345678', zip: '28001' })
+    expect(scrubDeep({ ip: '10.0.0.1:22', url: 'http://10.0.0.1/' }, { paths: false })).toEqual({ ip: null, url: null })
+  })
 })
