@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 — 2026-11-18
+
+- La ficha de proyecto de la API (`GET /api/v1/proyectos/{id}`) vuelve a dar en `version` la versión del software y da la huella para editar en `editVersion`.
+
 ## 0.6.0 — 2026-11-18
 
 - API v1 con escrituras ([docs/API.md](docs/API.md#escrituras)), con el permiso `escritura` (que incluye `lectura`), que ya se puede conceder en Ajustes › Apps conectadas: alta y cambio de clientes, notas en clientes, proyectos o webs, estado y fase de un proyecto y estado y fecha prevista de las fases de un presupuesto (con `presupuestos`). Nunca borra: no hay ningún `DELETE`.

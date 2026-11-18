@@ -6,10 +6,11 @@ import { WRITE_SCOPES } from '@/lib/api/scopes'
 
 export const dynamic = 'force-dynamic'
 
-/** Ficha de un proyecto: repositorio, ubicaciones, servicios, webs, últimas notas y versión (la que pide `PATCH`). */
+/** Ficha de un proyecto: repositorio, ubicaciones, servicios, webs, últimas notas, `version` (la del software) y
+ * `editVersion` (la huella que pide `PATCH` como `version`). */
 export const GET = apiRoute<{ id: string }>('lectura', async (_req, { params }) => {
   const p = await getProject(params.id)
-  return p ? json({ ...publicProject(p), version: projectVersion(p) }) : notFound()
+  return p ? json({ ...publicProject(p), editVersion: projectVersion(p) }) : notFound()
 })
 
 /**

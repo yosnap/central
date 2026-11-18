@@ -68,7 +68,7 @@ Nunca incluyen IPs, direcciones SSH, rutas de clave, tokens ni secretos (`src/li
 | `PATCH /api/v1/clientes/{id}` | escritura | Cambia sus datos: `{ client }` |
 | `POST /api/v1/notas` | escritura | Nota en un cliente, un proyecto o una web: `201 { note }` |
 | `GET /api/v1/proyectos` | lectura | `{ projects, nextCursor }`, del más al menos activo (los que no tienen actividad, primero; el id desempata). Un cursor que ya no está en la lista da 400. Filtros: `estado` (ACTIVE, MAINTENANCE, DORMANT, ARCHIVED), `tipo` (CLIENT, OWN, TRAINING, EXPERIMENT), `cliente`, `q`, `cursor`, `limite` (1–200, 50 por defecto) |
-| `GET /api/v1/proyectos/{id}` | lectura | Ficha: repositorio, ubicaciones, servicios, webs, últimas notas y `version` |
+| `GET /api/v1/proyectos/{id}` | lectura | Ficha: repositorio, ubicaciones, servicios, webs, últimas notas, `version` (del software) y `editVersion` (la huella que `PATCH` pide como `version`) |
 | `PATCH /api/v1/proyectos/{id}` | escritura | Cambia estado, `statusLocked` y fase: `{ project }` |
 | `GET /api/v1/webs` | lectura | `{ websites }`. Filtros: `tipo` (CLIENT, OWN, CENTRAL), `caidas=1` |
 | `GET /api/v1/servidores` | lectura | `{ servers }`: estado, CPU, memoria, disco, servicios, protección y proyectos |

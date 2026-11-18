@@ -34,7 +34,7 @@ export const projectVersion = (p: VersionFields) =>
 const select = { id: true, name: true, kind: true, status: true, statusLocked: true, phase: true, description: true, clientId: true, excluded: true, updatedAt: true } as const
 
 function view(p: VersionFields & { id: string; updatedAt: Date }) {
-  return { id: p.id, name: p.name, kind: p.kind, status: p.status, statusLocked: p.statusLocked, phase: p.phase, clientId: p.clientId, updatedAt: p.updatedAt, version: projectVersion(p) }
+  return { id: p.id, name: p.name, kind: p.kind, status: p.status, statusLocked: p.statusLocked, phase: p.phase, clientId: p.clientId, updatedAt: p.updatedAt, version: projectVersion(p), editVersion: projectVersion(p) }
 }
 
 export async function updateProjectState(id: string, patch: ProjectStatePatch, opts: MutationOptions = {}) {

@@ -246,7 +246,7 @@ describe('notas', () => {
 })
 
 describe('proyectos', () => {
-  const version = async (id: string) => ((await call(proyecto.GET as RouteFn, 'GET', `/proyectos/${id}`, { key: W, params: { id } })).json.version as string)
+  const version = async (id: string) => ((await call(proyecto.GET as RouteFn, 'GET', `/proyectos/${id}`, { key: W, params: { id } })).json.editVersion as string)
 
   test('cambia estado y fase de un proyecto sin fijar', async () => {
     const r = await call(proyecto.PATCH as RouteFn, 'PATCH', '/proyectos/p1', { key: W, params: { id: 'p1' }, body: { version: await version('p1'), status: 'MAINTENANCE', phase: 'Soporte' } })
