@@ -10,8 +10,8 @@ export type ContainerRow = {
   server?: { id: string; name: string }
 }
 
-const STATE = { down: ['bad', 'Caído'], stopped: ['warn', 'Parado'], ok: ['ok', 'En marcha'] } as const
-const ORDER = ['down', 'stopped', 'ok']
+const STATE = { down: ['bad', 'Caído'], stopped: ['warn', 'Parado'], ok: ['ok', 'En marcha'], done: ['muted', 'Completada'] } as const
+const ORDER = ['down', 'stopped', 'ok', 'done']
 
 /** Tabla de servicios Docker con qué es cada uno, qué dominios sirve y a qué proyecto pertenece (editable). La infraestructura del servidor va al final. */
 export function ContainersTable({ containers, options, showServer }: { containers: ContainerRow[]; options: Option[]; showServer?: boolean }) {

@@ -79,7 +79,7 @@ Nunca se copian claves privadas al repo ni a la BD: Central guarda la **ruta** d
 |---|---|---|
 | Webs del servidor | responden en < 1,5 s | lentas / error o 5xx |
 | Procesador, memoria, disco | < 80–85 % | > 80–85 % / > 95 % |
-| Servicios (Docker/Swarm) | todos con sus réplicas | alguno caído (rojo) |
+| Servicios (Docker/Swarm) | todos con sus réplicas; una tarea puntual (migración) que terminó bien cuenta como «Completada», no como caída | alguno caído (rojo) |
 | Dentro ahora | nadie o IPs conocidas | sesión desde IP desconocida |
 | Intentos 1 h | lo normal | pico (> 3× la media) |
 | Bloqueadas | fail2ban activo | sin fail2ban |

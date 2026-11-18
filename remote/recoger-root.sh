@@ -21,12 +21,20 @@ t() {
 }
 
 echo "### version_root"
-echo 4                                             # 3 = 2 + servicios_detalle (imagen y dominios); 4 = + arranque y versión de cada servicio
+echo 5                                             # 3 = 2 + servicios_detalle (imagen y dominios); 4 = + arranque y versión de cada servicio; 5 = tareas puntuales completadas
 
 echo "### servicios"
 # Dokploy y Easypanel despliegan servicios de Swarm; si el nodo no es manager, contenedores sueltos
 if [ "$(t docker info --format '{{.Swarm.ControlAvailable}}')" = "true" ]; then
-  t docker service ls --format '{{.Name}}\t{{.Replicas}}' | head -n 300
+  # Un servicio a 0/N cuya última tarea acabó en «Complete» y sin ninguna que deba seguir en marcha es una tarea puntual que terminó
+  # bien (migraciones con restart on-failure): se marca «(completed)» como los replicated-job para no darlo por caído
+  t docker service ls --format '{{.Name}}\t{{.Replicas}}' | head -n 300 | while IFS=$'\t' read -r n r; do
+    case "$r" in
+      0/0*|*completed*) ;;
+      0/*) if [ -z "$(t docker service ps -q --filter desired-state=running "$n")" ] && t docker service ps --format '{{.CurrentState}}' "$n" | head -n 1 | grep -q '^Complete'; then r="$r (completed)"; fi ;;
+    esac
+    printf '%s\t%s\n' "$n" "$r"
+  done
 fi
 
 echo "### contenedores"
