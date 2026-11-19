@@ -422,8 +422,9 @@ export function groupProjects(dirs: FoundDir[], now = new Date()): ScannedProjec
   for (const d of dirs) {
     const k = keyOf.get(d)!
     if (!k.startsWith('local:') || d.remote) continue
-    const parent = path.dirname(d.absPath)
-    const sibling = dirs.find((o) => o !== d && keyOf.get(o)!.startsWith('git:') && (path.dirname(o.absPath) === parent || path.dirname(o.absPath) === path.dirname(parent)) && d.name.startsWith(o.name + '-'))
+    const parent = pathKey(path.dirname(d.absPath))
+    const grandparent = pathKey(path.dirname(path.dirname(d.absPath)))
+    const sibling = dirs.find((o) => o !== d && keyOf.get(o)!.startsWith('git:') && [parent, grandparent].includes(pathKey(path.dirname(o.absPath))) && d.name.startsWith(o.name + '-'))
     if (sibling) keyOf.set(d, keyOf.get(sibling)!)
   }
 
