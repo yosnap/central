@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.3 — 2026-11-19
+
+- Las casillas e interruptores conservan lo guardado al pulsar Guardar: antes volvían a como estaban al cargar la página (p. ej. «Pruebas» en Entornos de la ficha de proyecto) y un segundo guardado lo perdía.
+
 ## 0.6.2 — 2026-11-19
 
 - Ajustes: tras «Escanear ahora», cada carpeta raíz muestra cuántos proyectos tiene ella, no el total del escaneo.
