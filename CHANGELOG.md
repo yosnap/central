@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.5 — 2026-11-19
+
+- Windows: el escáner junta un repositorio con su carpeta hermana (`<repo>-<algo>`) aunque una ruta llegue con `C:` y la otra con `c:`.
+
 ## 0.6.4 — 2026-11-19
 
 - Dependencias al día por avisos de seguridad: Next.js 16.4.5, yaml 2.8.3, y hono 4.13.16 con @hono/node-server 2.1.6 (los usa el SDK del MCP). `bun audit` queda sin avisos. Ninguno afectaba a Central: no usa `use cache` ni `unstable_cache`, el MCP va por stdio y yaml solo lee los docker-compose locales.
