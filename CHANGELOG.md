@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.4 — 2026-11-19
+
+- Dependencias al día por avisos de seguridad: Next.js 16.4.5, yaml 2.8.3, y hono 4.13.16 con @hono/node-server 2.1.6 (los usa el SDK del MCP). `bun audit` queda sin avisos. Ninguno afectaba a Central: no usa `use cache` ni `unstable_cache`, el MCP va por stdio y yaml solo lee los docker-compose locales.
+
 ## 0.6.3 — 2026-11-19
 
 - Las casillas e interruptores conservan lo guardado al pulsar Guardar: antes volvían a como estaban al cargar la página (p. ej. «Pruebas» en Entornos de la ficha de proyecto) y un segundo guardado lo perdía.
