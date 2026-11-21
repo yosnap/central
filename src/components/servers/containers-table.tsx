@@ -6,12 +6,13 @@ import { InlineField, Pill, Table, type Option } from '@/components/ui'
 export type ContainerRow = {
   id: string; name: string; kind: string; state: string; detail: string | null; desired: number | null; running: number | null
   image: string | null; version?: string | null; role: string | null; domains: string[]; projectServiceId: string | null; matchManual: boolean; infra: boolean
+  reason: string | null; job: boolean
   projectService?: { name: string; project: { id: string; name: string } } | null
   server?: { id: string; name: string }
 }
 
-const STATE = { down: ['bad', 'Caído'], stopped: ['warn', 'Parado'], ok: ['ok', 'En marcha'], done: ['muted', 'Completada'] } as const
-const ORDER = ['down', 'stopped', 'ok', 'done']
+const STATE = { down: ['bad', 'Caído'], ok: ['ok', 'En marcha'], done: ['muted', 'Completada'], scaled: ['muted', 'Sin réplicas'] } as const
+const ORDER = ['down', 'ok', 'done', 'scaled']
 
 /** Tabla de servicios Docker con qué es cada uno, qué dominios sirve y a qué proyecto pertenece (editable). La infraestructura del servidor va al final. */
 export function ContainersTable({ containers, options, showServer }: { containers: ContainerRow[]; options: Option[]; showServer?: boolean }) {
@@ -29,7 +30,7 @@ export function ContainersTable({ containers, options, showServer }: { container
               <div className="font-medium">{c.name}</div>
               <div className="text-sm text-muted">{c.image ?? (c.kind === 'swarm' ? 'Swarm' : 'contenedor')}{c.version && <span className="ml-2 font-medium text-ink">v{c.version.replace(/^v/, '')}</span>}</div>
             </td>
-            <td><Pill tone={role === 'app' ? 'accent' : 'muted'}>{ROLE_LABEL[role] ?? role}</Pill></td>
+            <td><Pill tone={role === 'app' ? 'accent' : 'muted'}>{ROLE_LABEL[role] ?? role}</Pill>{c.job && <div className="mt-1 text-sm text-muted">Tarea puntual (migración)</div>}</td>
             <td className="max-w-72">
               {c.domains.length ? (
                 <ul className="flex flex-col gap-1 text-sm">
@@ -37,7 +38,7 @@ export function ContainersTable({ containers, options, showServer }: { container
                 </ul>
               ) : <span className="text-sm text-muted">—</span>}
             </td>
-            <td className="whitespace-nowrap"><Pill tone={tone}>{text}</Pill><div className="num mt-1 text-sm text-muted">{c.kind === 'swarm' ? c.detail : c.desired != null ? `${c.running}/${c.desired}` : ''}</div></td>
+            <td className="whitespace-nowrap"><Pill tone={tone}>{text}</Pill><div className="num mt-1 text-sm text-muted">{c.kind === 'swarm' ? c.detail : c.desired != null ? `${c.running}/${c.desired}` : ''}</div>{c.reason && <div className="mt-1 max-w-80 whitespace-normal text-xs text-bad">{c.reason}</div>}</td>
             <td className="min-w-72">
               <InlineField action={linkContainerAction} fields={{ id: c.id }} name="target" label={`Proyecto de ${c.name}`} hideLabel kind="combobox" allowCustom={false} options={options}
                 value={c.matchManual && c.infra ? 'infra' : c.matchManual && c.projectServiceId ? `svc:${c.projectServiceId}` : ''}

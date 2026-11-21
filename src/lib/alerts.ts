@@ -52,7 +52,7 @@ function redReasons(snap: Snapshot | null) {
   const c = snap.cards
   const out = Object.entries(c).filter(([, v]) => v?.level === 'red').map(([k]) => {
     if (k === 'ports' && c.ports) return `puertos abiertos a Internet de más (${c.ports.odd.join(', ')})`
-    if (k === 'services' && c.services) return `servicios caídos (${[...c.services.down, ...c.services.stopped].join(', ')})`
+    if (k === 'services' && c.services) return `servicios caídos (${c.services.down.join(', ')})`
     if (k === 'cpu' && c.cpu) return `CPU al ${Math.round(c.cpu.pct)} %`
     if (k === 'memory' && c.memory) return `memoria al ${Math.round(c.memory.pct)} %`
     if (k === 'disk' && c.disk) return `disco al ${Math.round(c.disk.pct)} %`

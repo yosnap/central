@@ -26,13 +26,13 @@ export function ServerCards({ snap }: { snap: Snapshot }) {
       <Tile label="Memoria" level={c.memory?.level} value={c.memory ? `${Math.round(c.memory.pct)} %` : none} note={snap.memory ? `${fmtBytes(snap.memory.used)} de ${fmtBytes(snap.memory.total)}` : undefined} />
       <Tile label="Disco" level={c.disk?.level} value={c.disk ? `${Math.round(c.disk.pct)} %` : none} note={snap.disk ? `${fmtBytes(snap.disk.used)} de ${fmtBytes(snap.disk.total)}` : undefined} />
       <Tile label="Servicios" level={c.services?.level} value={c.services ? `${c.services.ok}/${c.services.total}` : none}
-        note={c.services ? [c.services.down.length && `${c.services.down.length} caídos`, c.services.stopped.length && `${c.services.stopped.length} parados`].filter(Boolean).join(' · ') || 'todos en marcha' : 'necesita la lectura de root'} />
+        note={c.services ? [c.services.down.length && `${c.services.down.length} caídos`, c.services.scaled.length && `${c.services.scaled.length} sin réplicas`].filter(Boolean).join(' · ') || 'todos en marcha' : 'necesita la lectura de root'} />
       <Tile label="Webs del servidor" level={c.webs?.level} value={c.webs ? (c.webs.down ? `${c.webs.down} caídas` : c.webs.slow ? `${c.webs.slow} lentas` : 'En línea') : none} note={c.certificate ? `SSL: ${c.certificate.days} días` : undefined} />
       <Tile label="Dentro ahora" level={c.sessions?.level} value={c.sessions ? c.sessions.count : none} note={c.sessions?.strange.length ? `desde ${c.sessions.strange.join(', ')}` : undefined} />
       <Tile label="Intentos de acceso (1 h)" level={c.attempts?.level} value={c.attempts ? c.attempts.hour : none} note={c.attempts ? `${c.attempts.day} en 24 h` : undefined} />
       <Tile label="Bloqueadas" level={c.banned?.level} value={snap.fail2ban ? (snap.fail2ban.installed ? snap.fail2ban.now ?? 0 : 'Sin fail2ban') : none} note={snap.fail2ban?.installed ? `${snap.fail2ban.total ?? 0} en total` : undefined} />
       <Tile label="Puertos abiertos desde Internet" level={c.ports?.level} value={c.ports ? (c.ports.odd.length ? c.ports.odd.join(', ') : 'Solo los públicos') : none} note={c.ports ? c.ports.exposed.join(', ') : undefined} />
-      <Tile label="Mantenimiento" level={c.maintenance?.level} value={c.maintenance ? (c.maintenance.reboot ? 'Reinicio pendiente' : c.maintenance.security ? `${c.maintenance.security} de seguridad` : 'Al día') : none} note={c.maintenance ? `${c.maintenance.pending} actualizaciones pendientes` : undefined} />
+      <Tile label="Mantenimiento" level={c.maintenance?.level} value={c.maintenance ? (c.maintenance.reboot ? 'Reinicio pendiente' : c.maintenance.security ? `${c.maintenance.security} de seguridad` : 'Al día') : none} note={c.maintenance ? `${c.maintenance.pending} actualizaciones pendientes${c.maintenance.held ? ` · ${c.maintenance.held} en espera (fase o retenidas)` : ''}` : undefined} />
       <Tile label="Protección" level={snap.protection.level} value={`${snap.protection.done}/${snap.protection.total}`} note="comprobaciones que se han podido mirar" />
     </div>
   )

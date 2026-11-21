@@ -21,19 +21,26 @@ t() {
 }
 
 echo "### version_root"
-echo 5                                             # 3 = 2 + servicios_detalle (imagen y dominios); 4 = + arranque y versión de cada servicio; 5 = tareas puntuales completadas
+echo 6                                             # 3 = 2 + servicios_detalle (imagen y dominios); 4 = + arranque y versión de cada servicio; 5 = tareas puntuales completadas; 6 = motivo de los caídos y detección de tareas puntuales (restart on-failure)
 
 echo "### servicios"
 # Dokploy y Easypanel despliegan servicios de Swarm; si el nodo no es manager, contenedores sueltos
 if [ "$(t docker info --format '{{.Swarm.ControlAvailable}}')" = "true" ]; then
   # Un servicio a 0/N cuya última tarea acabó en «Complete» y sin ninguna que deba seguir en marcha es una tarea puntual que terminó
-  # bien (migraciones con restart on-failure): se marca «(completed)» como los replicated-job para no darlo por caído
+  # bien (migraciones con restart on-failure): se marca «(completed)» como los replicated-job para no darlo por caído.
+  # Los 0/N que no están completados llevan el estado y el motivo de su última tarea (p. ej. imagen no encontrada).
   t docker service ls --format '{{.Name}}\t{{.Replicas}}' | head -n 300 | while IFS=$'\t' read -r n r; do
+    last=''; msg=''
     case "$r" in
       0/0*|*completed*) ;;
-      0/*) if [ -z "$(t docker service ps -q --filter desired-state=running "$n")" ] && t docker service ps --format '{{.CurrentState}}' "$n" | head -n 1 | grep -q '^Complete'; then r="$r (completed)"; fi ;;
+      0/*)
+        linea=$(t docker service ps --format '{{.CurrentState}}|{{.Message}}' "$n" | head -n 1)
+        last=${linea%%|*}; msg=${linea#*|}
+        if [ "$last" = "Complete" ] && [ -z "$(t docker service ps -q --filter desired-state=running "$n")" ]; then r="$r (completed)"; msg=''; fi
+        ;;
     esac
-    printf '%s\t%s\n' "$n" "$r"
+    msg=$(printf '%s' "$msg" | tr '\t\n' '  ' | cut -c1-100)
+    printf '%s\t%s\t%s\t%s\n' "$n" "$r" "$last" "$msg"
   done
 fi
 
@@ -161,8 +168,9 @@ def js(x):
     except Exception: return None
 for line in sys.stdin.read().split('\n'):
     p = line.split('\t')
-    if len(p) != 4: continue
+    if len(p) not in (4, 5): continue
     name, labels, image, stamp = js(p[0]), js(p[1]), js(p[2]), js(p[3])
+    restart = js(p[4]) if len(p) > 4 else None
     if not isinstance(name, str): continue
     name = name.lstrip('/')
     # la tarea de un servicio de Swarm aporta la versión de su imagen al servicio
@@ -171,7 +179,10 @@ for line in sys.stdin.read().split('\n'):
     if isinstance(labels, dict):
         v = labels.get('org.opencontainers.image.version')
         if isinstance(v, str) and VERSION.match(v.strip()): vers[target] = v.strip()
-    if owner: continue  # el resto (imagen, dominios, arranque) es del servicio, no de cada tarea
+    if owner:
+        # restart on-failure o none: tarea puntual (migración, build), no servicio de larga duración
+        if isinstance(restart, str) and restart in ('on-failure', 'none'): print('r', owner, restart)
+        continue  # el resto (imagen, dominios, arranque) es del servicio, no de cada tarea
     if isinstance(stamp, str) and STAMP.match(stamp) and not stamp.startswith('0001'): since[name] = stamp[:19] + 'Z'
     if isinstance(image, str):
         image = image.split('@')[0]
@@ -231,7 +242,7 @@ for name in sorted(set(imgs) | set(doms)):
     n += 1
 EOS
 read -r -d '' DETALLE_DOCKER <<'EOS' || true
-docker service inspect --format '{{json .Spec.Name}}{{"\t"}}{{json .Spec.Labels}}{{"\t"}}{{json .Spec.TaskTemplate.ContainerSpec.Image}}{{"\t"}}{{json .UpdatedAt}}' $(docker service ls -q </dev/null 2>/dev/null) </dev/null 2>/dev/null
+docker service inspect --format '{{json .Spec.Name}}{{"\t"}}{{json .Spec.Labels}}{{"\t"}}{{json .Spec.TaskTemplate.ContainerSpec.Image}}{{"\t"}}{{json .UpdatedAt}}{{"\t"}}{{json .Spec.RestartCondition}}' $(docker service ls -q </dev/null 2>/dev/null) </dev/null 2>/dev/null
 docker inspect --format '{{json .Name}}{{"\t"}}{{json .Config.Labels}}{{"\t"}}{{json .Config.Image}}{{"\t"}}{{json .State.StartedAt}}' $(docker ps -aq </dev/null 2>/dev/null) </dev/null 2>/dev/null
 EOS
 cuerpo=$(

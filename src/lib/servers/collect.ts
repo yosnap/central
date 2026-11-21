@@ -89,15 +89,15 @@ export async function readServer(server: Server) {
   if (r.services) {
     const before = new Map((await prisma.serverContainer.findMany({ where: { serverId: server.id }, select: { name: true, startedAt: true } })).map((c) => [c.name, c.startedAt]))
     for (const s of r.services) {
-      const state = !s.ok ? 'down' : s.stopped ? 'stopped' : s.done ? 'done' : 'ok'
+      const state = !s.ok ? 'down' : s.done ? 'done' : s.scaled ? 'scaled' : 'ok'
       // sin la sección de detalle (script antiguo) se conservan la imagen y los dominios que hubiera
       const det = r.details?.[s.name]
       const extra = r.details ? { image: det?.image ?? null, domains: sortDomains(det?.domains ?? []), version: det?.version ?? versionFromImage(det?.image), startedAt: det?.startedAt ?? null } : {}
       const role = roleOf(det?.image, s.name)
       const saved = await prisma.serverContainer.upsert({
         where: { serverId_name: { serverId: server.id, name: s.name } },
-        create: { serverId: server.id, name: s.name, kind: s.kind, state, desired: s.desired, running: s.running, detail: s.detail, role, ...extra, seenAt: now },
-        update: { kind: s.kind, state, desired: s.desired, running: s.running, detail: s.detail, ...(r.details ? { role } : {}), ...extra, seenAt: now },
+        create: { serverId: server.id, name: s.name, kind: s.kind, state, desired: s.desired, running: s.running, detail: s.detail, reason: s.reason, job: s.job, role, ...extra, seenAt: now },
+        update: { kind: s.kind, state, desired: s.desired, running: s.running, detail: s.detail, reason: s.reason, job: s.job, ...(r.details ? { role } : {}), ...extra, seenAt: now },
       })
       // ha vuelto a arrancar (o el servicio de Swarm se ha actualizado): un despliegue. La primera lectura solo fija la referencia
       const prev = before.get(s.name)

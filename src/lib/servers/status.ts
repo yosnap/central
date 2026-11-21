@@ -49,12 +49,13 @@ export function cards(r: Reading, ctx: Ctx): Record<string, Card> {
   }
   if (r.updates) {
     const security = Number(r.hardening?.parches_seguridad ?? 0) || 0
-    t.maintenance = { level: r.updates.reboot || security ? 'amber' : 'green', pending: r.updates.pending, security, reboot: r.updates.reboot }
+    t.maintenance = { level: r.updates.reboot || security ? 'amber' : 'green', pending: r.updates.pending, security, reboot: r.updates.reboot, held: r.updates.held }
   }
   if (r.services) {
-    const down = r.services.filter((s) => !s.ok).map((s) => s.name)
-    const stopped = r.services.filter((s) => s.ok && s.stopped).map((s) => s.name)
-    t.services = { level: down.length ? 'red' : stopped.length ? 'amber' : 'green', ok: r.services.filter((s) => s.ok && !s.stopped).length, total: r.services.length, down, stopped }
+    // los escalados a cero (0/0) están apagados a propósito: no cuentan ni como caídos ni como parados
+    const act = r.services.filter((s) => !s.scaled)
+    const down = act.filter((s) => !s.ok).map((s) => s.name)
+    t.services = { level: down.length ? 'red' : 'green', ok: act.filter((s) => s.ok).length, total: act.length, down, scaled: r.services.filter((s) => s.scaled).map((s) => s.name) }
   }
   return t
 }

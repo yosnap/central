@@ -25,9 +25,10 @@ export default async function PendingPage({ searchParams }: { searchParams: Prom
   })
   const pending = projects.map((p) => ({ p, issues: projectIssues(p) })).filter((x) => x.issues.length)
   const { unprotected } = await serverAlerts()
-  // servicios Docker sin proyecto: las aplicaciones y lo que sirve algún dominio (no las bases de datos internas)
+  // servicios Docker sin proyecto: las aplicaciones y lo que sirve algún dominio (no las bases de datos internas);
+  // los escalados a cero (state 'scaled') están apagados a propósito y no piden acción
   const loose = await prisma.serverContainer.findMany({
-    where: { projectServiceId: null, infra: false, OR: [{ role: 'app' }, { domains: { isEmpty: false } }, { role: null }] },
+    where: { projectServiceId: null, infra: false, state: { not: 'scaled' }, OR: [{ role: 'app' }, { domains: { isEmpty: false } }, { role: null }] },
     include: { server: { select: { id: true, name: true } } },
     orderBy: [{ server: { name: 'asc' } }, { name: 'asc' }],
   })

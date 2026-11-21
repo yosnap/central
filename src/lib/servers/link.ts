@@ -53,7 +53,8 @@ export async function linkContainer(containerId: string, target: string, environ
     const product = isThirdPartyRole(c.role) ? techOf(c.image, c.name)?.label.toLowerCase() : undefined
     const name = product ?? (c.role && c.role !== 'app' && c.role !== 'other' ? SERVICE_NAME[c.role] ?? ROLE_LABEL[c.role]?.toLowerCase() ?? c.role : isApiService(c.name) ? 'api' : 'web')
     const env = environment ?? envFromDomain(c.domains[0])
-    const existing = project.services.find((s) => s.url && hosts.has(hostOf(s.url) ?? '')) ?? project.services.find((s) => s.name === name && s.environment === env && !s.serverId)
+    // reutiliza el servicio ya creado aunque esté enlazado a otro contenedor: si no, cada enlace duplica la entrada
+    const existing = project.services.find((s) => s.url && hosts.has(hostOf(s.url) ?? '')) ?? project.services.find((s) => s.name === name && s.environment === env)
     if (existing) serviceId = existing.id
     else {
       // solo las webs se vigilan por su dominio; el de un visor de base de datos no es la web del proyecto
