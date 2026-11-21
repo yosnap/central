@@ -32,7 +32,7 @@ export type Snapshot = {
     attempts: CardBase & { hour: number; day: number }
     banned: CardBase & { now: number | null }
     ports: CardBase & { odd: number[]; exposed: number[] }
-    maintenance: CardBase & { pending: number; security: number; reboot: boolean }
-    services: CardBase & { ok: number; total: number; down: string[]; stopped: string[] }
+    maintenance: CardBase & { pending: number; security: number; reboot: boolean; held: number }
+    services: CardBase & { ok: number; total: number; down: string[]; scaled: string[] }
   }>
 }

@@ -79,13 +79,13 @@ Nunca se copian claves privadas al repo ni a la BD: Central guarda la **ruta** d
 |---|---|---|
 | Webs del servidor | responden en < 1,5 s | lentas / error o 5xx |
 | Procesador, memoria, disco | < 80–85 % | > 80–85 % / > 95 % |
-| Servicios (Docker/Swarm) | todos con sus réplicas; una tarea puntual (migración) que terminó bien cuenta como «Completada», no como caída | alguno caído (rojo) |
+| Servicios (Docker/Swarm) | todos con sus réplicas; una tarea puntual (migración) que terminó bien cuenta como «Completada», no como caída; los escalados a cero (0/0) cuentan como «Sin réplicas» y no ni como caídos ni como parados | alguno caído (rojo) |
 | Dentro ahora | nadie o IPs conocidas | sesión desde IP desconocida |
 | Intentos 1 h | lo normal | pico (> 3× la media) |
 | Bloqueadas | fail2ban activo | sin fail2ban |
 | Puertos abiertos desde Internet | solo 22, 80, 443 | otro alcanzable (rojo) |
 | Protección | 12/12 comprobaciones | lo que falte, con el comando para arreglarlo |
-| Mantenimiento | al día | reinicio o parches de seguridad pendientes |
+| Mantenimiento | al día | reinicio o parches de seguridad pendientes (las «en espera»: por fases o retenidas, se indican aparte y no cuentan como pendientes) |
 
 Gris = dato viejo (más de 3 ciclos sin leer), con el motivo (`timeout`, `red`, `autenticacion`, `clave de host no confiada`).
 
@@ -106,7 +106,7 @@ Las 13 comprobaciones de protección (las 12 de la guía más «sin reinicio pen
 
 ## 3b. Versiones y despliegues
 
-- `recoger-root.sh` versión 4 devuelve, por servicio de Swarm o contenedor, su imagen, sus dominios, su arranque (`StartedAt`, o `UpdatedAt` del servicio de Swarm) y la versión de su imagen (`org.opencontainers.image.version`). La ficha del servidor ofrece «Actualizar» si tiene una versión anterior; se instala desde Central con usuario y contraseña (no se guarda) o desde `remote/alta-servidor.sh`.
+- `recoger-root.sh` versión 6 devuelve, por servicio de Swarm o contenedor, su imagen, sus dominios, su arranque (`StartedAt`, o `UpdatedAt` del servicio de Swarm), la versión de su imagen (`org.opencontainers.image.version`), el motivo de Docker cuando está caído (estado y `Message` de la última tarea: imagen no encontrada, despliegue fallado…) y su política de reinicio para distinguir tareas puntuales (migraciones con `on-failure`) de servicios de larga duración. La ficha del servidor ofrece «Actualizar» si tiene una versión anterior; se instala desde Central con usuario y contraseña (no se guarda) o desde `remote/alta-servidor.sh`.
 - **Despliegue** (`Deployment`): si el arranque de un contenedor cambia entre dos lecturas, Central guarda fecha, imagen, versión anterior y nueva, y lee al momento la versión de su servicio. Se ven en las fichas del proyecto y del servidor (se guardan un año).
 - **Versión de cada servicio** (`src/lib/deploy-version.ts`): la ruta de versión de su web (la escrita o una encontrada sola entre `/api/version`, `/version`, `/api/health`, `/health`, `/version.json`, `/api/status`, como mucho una vez al día), si no la versión de la imagen de su contenedor, y si no la etiqueta de la imagen cuando parece una versión. Se lee en cada comprobación de webs, tras cada despliegue y al enlazar un contenedor; la del servicio de producción es `Project.deployedVersion`.
 

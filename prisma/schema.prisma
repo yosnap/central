@@ -772,7 +772,7 @@ model ServerContainer {
   server           Server          @relation(fields: [serverId], references: [id], onDelete: Cascade)
   name             String
   kind             String          // swarm | container
-  state            String          // ok | down | stopped
+  state            String          // ok | down | done | scaled (0/0 a propósito)
   desired          Int?
   running          Int?
   image            String?
@@ -780,6 +780,8 @@ model ServerContainer {
   startedAt        DateTime?       // arranque del contenedor o última actualización del servicio de Swarm: si cambia, es un despliegue
   role             String?         // app | database | cache | proxy | queue | automation | storage | other
   detail           String?         // estado tal cual lo da Docker
+  reason           String?         // motivo de Docker cuando está caído (imagen no encontrada, despliegue fallado…)
+  job              Boolean         @default(false) // tarea puntual (migración, build), no servicio de larga duración
   domains          String[]
   projectServiceId String?
   projectService   ProjectService? @relation(fields: [projectServiceId], references: [id], onDelete: SetNull)

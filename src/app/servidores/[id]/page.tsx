@@ -85,7 +85,7 @@ export default async function ServerPage({ params }: { params: Promise<{ id: str
                 <tr key={p.id}>
                   <td><Link href={`/proyectos/${p.project.id}`} className="font-medium hover:underline">{p.project.name}</Link></td>
                   <td className="text-muted">{p.name} · {p.environment}</td>
-                  <td>{p.containers.length ? p.containers.map((c) => <Pill key={c.name} tone={c.state === 'ok' ? 'ok' : c.state === 'down' ? 'bad' : c.state === 'done' ? 'muted' : 'warn'}>{c.name}</Pill>) : <span className="text-muted">—</span>}</td>
+                  <td>{p.containers.length ? p.containers.map((c) => <Pill key={c.name} tone={c.state === 'down' ? 'bad' : c.state === 'ok' ? 'ok' : 'muted'}>{c.name}</Pill>) : <span className="text-muted">—</span>}</td>
                   <td>{(p.website?.kumaStatus ?? p.website?.lastStatus) ? <Pill tone={(p.website?.kumaStatus ?? p.website?.lastStatus) === 'up' ? 'ok' : 'bad'}>{(p.website?.kumaStatus ?? p.website?.lastStatus) === 'up' ? 'En línea' : 'Caída'}</Pill> : '—'}</td>
                 </tr>
               ))}

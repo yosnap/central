@@ -5,7 +5,7 @@
  */
 
 /** Versión de recoger-root.sh en remote/: si el servidor tiene una anterior, la ficha ofrece actualizarla. */
-export const ROOT_SCRIPT_VERSION = 5
+export const ROOT_SCRIPT_VERSION = 6
 
 const SECTIONS = new Set([
   'version', 'sistema', 'memoria', 'disco', 'sesiones', 'puertos', 'intentos', 'actualizaciones', 'bastionado',
@@ -69,9 +69,11 @@ const keyValue = (lines: string[]) => {
   return d
 }
 const DOMAIN = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/
+// dominio de marcador («dominio.com», «tu-web.com»…) que aparece en reglas del proxy sin configurar: no es un dominio real
+const PLACEHOLDER = /(^|[.-])(xxx+|tu|your|mi|my|ejemplo|example|dominio|domain|placeholder|changeme)([.-]|$)|x{3,}/i
 const NAME = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
 
-export type Service = { name: string; kind: 'swarm' | 'container'; ok: boolean; stopped: boolean; /** Tarea puntual (migración, build) que terminó bien: ni caída ni en marcha. */ done: boolean; detail: string; desired: number | null; running: number | null }
+export type Service = { name: string; kind: 'swarm' | 'container'; ok: boolean; /** Escalado a cero a propósito: ni caído ni parado. */ scaled: boolean; /** Tarea puntual (migración, build) que terminó bien: ni caída ni en marcha. */ done: boolean; detail: string; desired: number | null; running: number | null; /** Motivo de Docker cuando está caído (imagen no encontrada, despliegue fallado…). */ reason: string | null; /** Tarea puntual (migración, build), no servicio de larga duración. */ job: boolean }
 export type InventoryItem = { name: string; status: string; composeProject: string | null; composeService: string | null; swarmService: string | null }
 export type Reading = {
   version: number | null
@@ -91,7 +93,7 @@ export type Reading = {
   inventory?: InventoryItem[]
   domains?: string[]
   /** Imagen y dominios de cada servicio (recoger-root versión 3). */
-  details?: Record<string, { image: string | null; domains: string[]; startedAt: Date | null; version: string | null }>
+  details?: Record<string, { image: string | null; domains: string[]; startedAt: Date | null; version: string | null; job: boolean }>
   fail2ban?: { installed: boolean; now?: number; total?: number }
   hardening?: Record<string, string>
 }
@@ -99,12 +101,18 @@ export type Reading = {
 function services(swarm: string[], containers: string[]): Service[] {
   const out: Service[] = []
   for (const l of swarm) {
-    const [name, rep = ''] = l.split('\t')
+    const [name, rep = '', last = '', msg = ''] = l.split('\t')
     const r = rep.trim().match(/^(\d+)\/(\d+)/)
     if (!name || !r) continue
-    // 0/0 es parado (Dokploy y Easypanel escalan a cero al pulsar «stop»): no está caído, pero tampoco verde
+    // 0/0 (Dokploy y Easypanel escalan a cero al pulsar «stop») no está caído: está apagado a propósito
     const completed = rep.includes('completed')
-    out.push({ name: name.slice(0, 64), kind: 'swarm', ok: r[1] === r[2] || completed, stopped: r[2] === '0' && !completed, done: completed && r[1] !== r[2], detail: rep.trim().slice(0, 16), running: Number(r[1]), desired: Number(r[2]) })
+    const down = r[1] !== r[2] && !completed
+    out.push({
+      name: name.slice(0, 64), kind: 'swarm', ok: !down, scaled: r[2] === '0' && r[1] === '0' && !completed, done: completed && down,
+      detail: rep.trim().slice(0, 16), running: Number(r[1]), desired: Number(r[2]),
+      // el estado y el motivo de la última tarea, solo si el servicio debe estar en marcha y no está
+      reason: down ? (msg.trim().slice(0, 100) || last.trim().slice(0, 60) || null) : null, job: false,
+    })
   }
   // Junto a Swarm conviven contenedores sueltos (despliegues Compose de Dokploy): entran todos menos las tareas de un servicio («servicio.n.id»)
   const swarmNames = new Set(out.map((s) => s.name))
@@ -113,7 +121,7 @@ function services(swarm: string[], containers: string[]): Service[] {
     if (p.length < 2 || !p[0]) continue
     if (swarmNames.has(p[0].split('.')[0])) continue
     const endedWell = p[1] === 'exited' && (p[2] ?? '').startsWith('Exited (0)') // migraciones, builds
-    out.push({ name: p[0].slice(0, 64), kind: 'container', ok: p[1] === 'running' || endedWell, stopped: false, done: endedWell, detail: p[1].slice(0, 16), running: p[1] === 'running' ? 1 : 0, desired: 1 })
+    out.push({ name: p[0].slice(0, 64), kind: 'container', ok: p[1] === 'running' || endedWell, scaled: false, done: endedWell, detail: p[1].slice(0, 16), running: p[1] === 'running' ? 1 : 0, desired: 1, reason: null, job: false })
   }
   return out
 }
@@ -205,19 +213,21 @@ export function interpret(text: string): Reading {
   if (sec.servicios || sec.contenedores) d.services = services(sec.servicios ?? [], sec.contenedores ?? [])
   d.mail = mail(sec.servicios ?? [], sec.contenedores ?? [], sec.correo ?? [])
   if (sec.inventario && framed.has('inventario')) d.inventory = inventory(sec.inventario)
-  if (sec.webs && framed.has('webs') && sec.webs.includes('fuente ok')) d.domains = sec.webs.filter((l) => l.startsWith('web ')).map((l) => l.slice(4).trim()).filter((x) => DOMAIN.test(x)).slice(0, 200)
+  if (sec.webs && framed.has('webs') && sec.webs.includes('fuente ok')) d.domains = sec.webs.filter((l) => l.startsWith('web ')).map((l) => l.slice(4).trim()).filter((x) => DOMAIN.test(x) && !PLACEHOLDER.test(x)).slice(0, 200)
   if (sec.servicios_detalle && framed.has('servicios_detalle') && sec.servicios_detalle.includes('fuente ok')) {
     const det: NonNullable<Reading['details']> = {}
     for (const l of sec.servicios_detalle) {
       const [t, name, val] = l.split(' ')
-      if (!name || !val || !NAME.test(name) || !['i', 'd', 's', 'v'].includes(t)) continue
-      const x = (det[name] ??= { image: null, domains: [], startedAt: null, version: null })
+      if (!name || !val || !NAME.test(name) || !['i', 'd', 's', 'v', 'r'].includes(t)) continue
+      const x = (det[name] ??= { image: null, domains: [], startedAt: null, version: null, job: false })
       if (t === 's' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(val)) x.startedAt = new Date(val)
       if (t === 'v' && /^v?\d+\.\d+(\.\d+)?([-+][A-Za-z0-9.]+)?$/.test(val)) x.version = val
       if (t === 'i' && /^[A-Za-z0-9][A-Za-z0-9._/:-]{0,199}$/.test(val)) x.image = val
-      if (t === 'd' && DOMAIN.test(val) && x.domains.length < 20) x.domains.push(val)
+      if (t === 'd' && DOMAIN.test(val) && !PLACEHOLDER.test(val) && x.domains.length < 20) x.domains.push(val)
+      if (t === 'r' && ['on-failure', 'none'].includes(val)) x.job = true // restart on-failure o none: tarea puntual, no servicio de larga duración
     }
     d.details = det
+    if (d.services) for (const s of d.services) if (det[s.name]?.job) s.job = true
   }
   if (sec.fail2ban) {
     const f = keyValue(sec.fail2ban)
