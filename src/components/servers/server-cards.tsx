@@ -26,7 +26,7 @@ export function ServerCards({ snap }: { snap: Snapshot }) {
       <Tile label="Memoria" level={c.memory?.level} value={c.memory ? `${Math.round(c.memory.pct)} %` : none} note={snap.memory ? `${fmtBytes(snap.memory.used)} de ${fmtBytes(snap.memory.total)}` : undefined} />
       <Tile label="Disco" level={c.disk?.level} value={c.disk ? `${Math.round(c.disk.pct)} %` : none} note={snap.disk ? `${fmtBytes(snap.disk.used)} de ${fmtBytes(snap.disk.total)}` : undefined} />
       <Tile label="Servicios" level={c.services?.level} value={c.services ? `${c.services.ok}/${c.services.total}` : none}
-        note={c.services ? [c.services.down.length && `${c.services.down.length} caídos`, c.services.scaled.length && `${c.services.scaled.length} sin réplicas`].filter(Boolean).join(' · ') || 'todos en marcha' : 'necesita la lectura de root'} />
+        note={c.services ? [c.services.down.length && `${c.services.down.length} caídos`, (c.services.scaled?.length ?? 0) && `${c.services.scaled.length} sin réplicas`].filter(Boolean).join(' · ') || 'todos en marcha' : 'necesita la lectura de root'} />
       <Tile label="Webs del servidor" level={c.webs?.level} value={c.webs ? (c.webs.down ? `${c.webs.down} caídas` : c.webs.slow ? `${c.webs.slow} lentas` : 'En línea') : none} note={c.certificate ? `SSL: ${c.certificate.days} días` : undefined} />
       <Tile label="Dentro ahora" level={c.sessions?.level} value={c.sessions ? c.sessions.count : none} note={c.sessions?.strange.length ? `desde ${c.sessions.strange.join(', ')}` : undefined} />
       <Tile label="Intentos de acceso (1 h)" level={c.attempts?.level} value={c.attempts ? c.attempts.hour : none} note={c.attempts ? `${c.attempts.day} en 24 h` : undefined} />

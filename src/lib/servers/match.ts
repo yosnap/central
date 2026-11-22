@@ -65,7 +65,11 @@ export async function matchContainers(serverId: string) {
     const next = infra ? null : wanted.get(c.id) ?? null
     if (next !== c.projectServiceId || infra !== c.infra) await prisma.serverContainer.update({ where: { id: c.id }, data: { projectServiceId: next, infra } })
   }
-  // el dominio propio que sirve el panel es su dirección, si no se ha puesto a mano
+  // el dominio propio que sirve el panel es su dirección, si no se ha puesto a mano y no lo usa ya otro servidor
   const panel = containers.find((c) => (c.matchManual ? c.infra : isInfra(c.name)) && c.role === 'panel' && c.domains.some((d) => !PANEL_DOMAIN.test(d)))
-  if (panel) await prisma.server.updateMany({ where: { id: serverId, panelUrl: null }, data: { panelUrl: `https://${panel.domains.find((d) => !PANEL_DOMAIN.test(d))}` } })
+  if (panel) {
+    const candidate = `https://${panel.domains.find((d) => !PANEL_DOMAIN.test(d))}`
+    const other = await prisma.server.findFirst({ where: { panelUrl: candidate, id: { not: serverId } }, select: { id: true } })
+    if (!other) await prisma.server.updateMany({ where: { id: serverId, panelUrl: null }, data: { panelUrl: candidate } })
+  }
 }
